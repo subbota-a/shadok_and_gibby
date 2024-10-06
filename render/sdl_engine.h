@@ -39,7 +39,7 @@ private:
     void drawPlayer(const domain::Player &player) const;
     std::vector<SDL_Color> getFlowersColors(const std::vector<unsigned> &scores) const;
     void drawFlowers(const domain::Flowers &flowers) const;
-    void drawStatus(domain::GameStatus game_status) const;
+    void drawStatus(const domain::State &state) const;
     std::vector<SDL_Rect> getCells(const std::vector<domain::Position> &positions) const;
 };
 

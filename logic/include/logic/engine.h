@@ -55,6 +55,7 @@ private:
     void eatFlowerByPlayer();
     [[nodiscard]] ptrdiff_t getFlowerIndex(const domain::Position &pos) const;
     [[nodiscard]] domain::GameStatus getNextStatus() const;
+    void pointEnemy(int enemy_index, const domain::Position& flower);
 };
 
 } // namespace logic

@@ -18,9 +18,9 @@ int main()
             .field_size = {20, 20},
             .player_step_size = 1,
             .enemy_step_size = 1,
-            .number_of_enemies = 5,
+            .number_of_enemies = 4,
             .number_of_flowers = 15,
-            .flower_scores_range = {1, 9},
+            .flower_scores_range = {1, 10},
             .max_player_steps = 100,
             .min_player_scores = 100,
     };

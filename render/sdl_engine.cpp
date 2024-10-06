@@ -48,7 +48,7 @@ void SdlEngine::draw(const domain::State &state)
     drawEnemies(state.enemies);
     drawPlayer(state.player);
     drawFlowers(state.flowers);
-    drawStatus(state.game_status);
+    drawStatus(state);
 
     surface_.Present();
 }
@@ -57,7 +57,7 @@ std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitComman
 SdlEngine::getCommand(const domain::GameStatus status)
 {
     if (status == domain::GameStatus::EnemiesTurn) {
-        //std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(500));
         return domain::MoveEnemiesCommand();
     }
     SDL_Event event;
@@ -135,7 +135,7 @@ void SdlEngine::drawEnemies(const domain::Enemies &enemies) const
 }
 void SdlEngine::drawPlayer(const domain::Player &player) const
 {
-    constexpr auto color = SDL_Color(255, 0, 255, 255);
+    constexpr auto color = SDL_Color(0, 0, 255, 255);
     auto cell = getCell(player.position, cell_size_);
     cell.y = out_height_ - cell.y - cell.h;
     surface_.FillRect(cell, color);
@@ -150,9 +150,11 @@ void SdlEngine::drawFlowers(const domain::Flowers &flowers) const
     });
 }
 
-void SdlEngine::drawStatus(domain::GameStatus game_status) const
+void SdlEngine::drawStatus(const domain::State &state) const
 {
-    switch (game_status) {
+    std::cout << "Scores: " << state.player.scores << ", steps: " << state.player.steps << std::endl;
+
+    switch (state.game_status) {
     case domain::GameStatus::PlayerTurn:
         [[fallthrough]];
     case domain::GameStatus::EnemiesTurn:
