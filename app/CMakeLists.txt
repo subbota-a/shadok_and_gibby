@@ -9,3 +9,5 @@ target_link_libraries(${_target}
     domain
     render
 )
+
+install(TARGETS ${_target})

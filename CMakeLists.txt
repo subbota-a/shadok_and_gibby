@@ -7,3 +7,5 @@ add_subdirectory(domain)
 add_subdirectory(logic)
 add_subdirectory(render)
 add_subdirectory(app)
+
+install(DIRECTORY assets DESTINATION share/${CMAKE_PROJECT_NAME} )
