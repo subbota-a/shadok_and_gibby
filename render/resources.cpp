@@ -23,14 +23,24 @@ Resources::Resources(std::string_view application_name)
 #endif
 }
 
-std::unique_ptr<SDL_Surface> Resources::loadImage(const std::string& path) const
+std::unique_ptr<SDL_Surface> Resources::loadImage(const std::string& file_name) const
 {
     using namespace std::string_literals;
-    auto surface = std::unique_ptr<SDL_Surface>(IMG_Load((assets_path_ / path).c_str()));
+    auto surface = std::unique_ptr<SDL_Surface>(IMG_Load((assets_path_ / file_name).c_str()));
     if (!surface) {
         throw std::runtime_error("IMG_Load failed!: "s + IMG_GetError());
     }
     return surface;
+}
+
+std::unique_ptr<SDL_Texture> Resources::loadTexture(SDL_Renderer* renderer, const std::string& file_name) const
+{
+    using namespace std::string_literals;
+    auto texture = std::unique_ptr<SDL_Texture>(IMG_LoadTexture(renderer, (assets_path_ / file_name).c_str()));
+    if (!texture) {
+        throw std::runtime_error("IMG_Load failed!: "s + IMG_GetError());
+    }
+    return texture;
 }
 
 } // namespace render

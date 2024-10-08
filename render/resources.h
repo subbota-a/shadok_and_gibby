@@ -1,19 +1,15 @@
 #pragma once
-#include <SDL_surface.h>
-#include <memory>
-#include <filesystem>
+#include "deleters.h"
 
-template<>
-struct std::default_delete<SDL_Surface> {
-    void operator()(SDL_Surface* p) const noexcept { SDL_FreeSurface(p); }
-};
+#include <filesystem>
 
 namespace render {
 
 class Resources {
 public:
     explicit Resources(std::string_view application_name);
-    std::unique_ptr<SDL_Surface> loadImage(const std::string& path) const;
+    std::unique_ptr<SDL_Surface> loadImage(const std::string& file_name) const;
+    std::unique_ptr<SDL_Texture> loadTexture(SDL_Renderer* renderer, const std::string& file_name) const;
 
 private:
     std::filesystem::path assets_path_;

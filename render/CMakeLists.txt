@@ -14,6 +14,8 @@ add_library(${_target}
     resources.cpp
     resources.h
     sdl_resources.h
+    deleters.h
+    deleters.cpp
 )
 target_link_libraries(${_target}
     PUBLIC domain

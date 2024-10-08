@@ -25,7 +25,7 @@ public:
     void draw(const domain::State& state) override;
     [[nodiscard]] std::
             variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
-            getCommand(domain::GameStatus status) override;
+            getCommand(const domain::State& state) override;
 
 private:
     SdlGuard sdl_library_;
@@ -43,7 +43,8 @@ private:
     [[nodiscard]] std::vector<Uint8> getFlowersAlpha(const std::vector<unsigned>& scores) const;
     void drawFlowers(const domain::Flowers& flowers) const;
     void drawStatus(const domain::State& state) const;
-    std::vector<SDL_Rect> getCells(const std::vector<domain::Position>& positions) const;
+    [[nodiscard]] std::vector<SDL_Rect> getCells(const std::vector<domain::Position>& positions) const;
+    void UpdateWindowSize() const;
 };
 
 } // namespace render

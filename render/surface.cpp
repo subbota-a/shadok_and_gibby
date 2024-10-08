@@ -6,17 +6,27 @@ Surface::Surface()
               "Шадок и Гибби",
               SDL_WINDOWPOS_UNDEFINED,
               SDL_WINDOWPOS_UNDEFINED,
-              1024,
-              1024,
-              SDL_WINDOW_MAXIMIZED | SDL_WINDOW_ALLOW_HIGHDPI))
+              900,
+              900,
+              SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_MAXIMIZED))
 {
     if (!window_) {
         throw std::runtime_error(SDL_GetError());
     }
-    renderer_.reset(SDL_CreateRenderer(window_.get(), -1, SDL_RENDERER_ACCELERATED));
+    renderer_.reset(SDL_CreateRenderer(window_.get(), -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC));
     if (!renderer_) {
         throw std::runtime_error(SDL_GetError());
     }
+}
+
+int Surface::GetWindowDisplayIndex() const
+{
+    return SDL_GetWindowDisplayIndex(window_.get());
+}
+
+void Surface::ResizeWindow(const int width, const int height) const
+{
+    SDL_SetWindowSize(window_.get(), width, height);
 }
 
 void Surface::Clear(SDL_Color background) const
@@ -26,7 +36,10 @@ void Surface::Clear(SDL_Color background) const
     SDL_SetRenderDrawBlendMode(renderer_.get(), SDL_BLENDMODE_NONE);
 }
 
-void Surface::Present() const { SDL_RenderPresent(renderer_.get()); }
+void Surface::Present() const
+{
+    SDL_RenderPresent(renderer_.get());
+}
 
 void Surface::DrawPolyline(const std::vector<SDL_Point>& polyline, SDL_Color color) const
 {
@@ -63,11 +76,6 @@ SDL_Point Surface::FromWindow(SDL_Point window_point) const
             .x = static_cast<int>(std::round(x)),
             .y = static_cast<int>(std::round(y)),
     };
-}
-
-std::unique_ptr<SDL_Texture> Surface::CreateTextureFromSurface(SDL_Surface* surface) const
-{
-    return std::unique_ptr<SDL_Texture>{SDL_CreateTextureFromSurface(renderer_.get(), surface)};
 }
 
 void Surface::SetColor(SDL_Color color) const

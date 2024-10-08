@@ -32,6 +32,13 @@ namespace {
         return static_cast<Uint8>(55 + 200 * (score - min) / range);
     }
 
+    int GetMinimumEdgeSize(const int display)
+    {
+        SDL_Rect bounds;
+        SDL_GetDisplayUsableBounds(display, &bounds);
+        return std::min(bounds.w, bounds.h) * 9 / 10;
+    }
+
 } // namespace
 
 SdlGuard::SdlGuard() : _impl(this, &SdlGuard::deleter)
@@ -50,15 +57,19 @@ void SdlGuard::deleter(SdlGuard*)
     SDL_Quit();
 }
 
-SdlEngine::SdlEngine() : cell_size_(0), out_height_(0)
+SdlEngine::SdlEngine() : sdl_library_{}, surface_{}, cell_size_(0), out_height_(0)
 {
+    UpdateWindowSize();
     Resources resources(PROJECT_NAME);
-    enemy_texture_ = surface_.CreateTextureFromSurface(resources.loadImage("enemy.png").get());
-    shadok_texture_ = surface_.CreateTextureFromSurface(resources.loadImage("shadok.png").get());
-    flower_texture_ = surface_.CreateTextureFromSurface(resources.loadImage("flower.png").get());
+    enemy_texture_ = resources.loadTexture(surface_.Renderer(), "enemy.png");
+    shadok_texture_ = resources.loadTexture(surface_.Renderer(), "shadok.png");
+    flower_texture_ = resources.loadTexture(surface_.Renderer(), "flower.png");
 }
 
-void SdlEngine::setConfig(const domain::Config& config) { config_ = config; }
+void SdlEngine::setConfig(const domain::Config& config)
+{
+    config_ = config;
+}
 
 void SdlEngine::draw(const domain::State& state)
 {
@@ -79,9 +90,9 @@ void SdlEngine::draw(const domain::State& state)
 }
 
 std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
-SdlEngine::getCommand(const domain::GameStatus status)
+SdlEngine::getCommand(const domain::State& state)
 {
-    if (status == domain::GameStatus::EnemiesTurn) {
+    if (state.game_status == domain::GameStatus::EnemiesTurn) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         return domain::MoveEnemiesCommand();
     }
@@ -91,7 +102,8 @@ SdlEngine::getCommand(const domain::GameStatus status)
             return domain::QuitCommand();
         }
         if (event.type == SDL_KEYDOWN) {
-            if (status == domain::GameStatus::PlayerLost || status == domain::GameStatus::PlayerWon) {
+            if (state.game_status == domain::GameStatus::PlayerLost ||
+                state.game_status == domain::GameStatus::PlayerWon) {
                 switch (event.key.keysym.sym) {
                 case SDLK_y:
                     return domain::StartCommand();
@@ -101,22 +113,37 @@ SdlEngine::getCommand(const domain::GameStatus status)
             } else {
                 switch (event.key.keysym.sym) {
                 case SDLK_KP_7:
+                case SDLK_w:
                     return domain::MoveCommand{.direction = domain::Direction::UP_LEFT};
                 case SDLK_KP_8:
+                case SDLK_e:
                     return domain::MoveCommand{.direction = domain::Direction::UP};
                 case SDLK_KP_9:
+                case SDLK_r:
                     return domain::MoveCommand{.direction = domain::Direction::UP_RIGHT};
                 case SDLK_KP_4:
+                case SDLK_s:
                     return domain::MoveCommand{.direction = domain::Direction::LEFT};
                 case SDLK_KP_6:
+                case SDLK_d:
                     return domain::MoveCommand{.direction = domain::Direction::RIGHT};
                 case SDLK_KP_1:
+                case SDLK_z:
                     return domain::MoveCommand{.direction = domain::Direction::DOWN_LEFT};
                 case SDLK_KP_2:
+                case SDLK_x:
                     return domain::MoveCommand{.direction = domain::Direction::DOWN};
                 case SDLK_KP_3:
+                case SDLK_c:
                     return domain::MoveCommand{.direction = domain::Direction::DOWN_RIGHT};
                 }
+            }
+        }
+        if (event.type == SDL_WINDOWEVENT) {
+            draw(state);
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED || event.window.event == SDL_WINDOWEVENT_EXPOSED) {
+            } else if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
+                UpdateWindowSize();
             }
         }
     }
@@ -136,6 +163,12 @@ std::vector<SDL_Rect> SdlEngine::getCells(const std::vector<domain::Position>& p
     std::ranges::transform(positions, cells.begin(), std::bind_back(&getCell, cell_size_));
     std::ranges::for_each(cells, [this](auto& cell) { cell.y = out_height_ - cell.y - cell.h; });
     return cells;
+}
+
+void SdlEngine::UpdateWindowSize() const
+{
+    const auto edge = GetMinimumEdgeSize(surface_.GetWindowDisplayIndex());
+    surface_.ResizeWindow(edge, edge);
 }
 
 std::vector<Uint8> SdlEngine::getFlowersAlpha(const std::vector<unsigned>& scores) const
@@ -179,7 +212,7 @@ void SdlEngine::drawFlowers(const domain::Flowers& flowers) const
     std::ranges::for_each(std::ranges::views::zip(rects, alphas), [this](const auto& pair) {
         SDL_SetTextureAlphaMod(flower_texture_.get(), std::get<const Uint8&>(pair));
         surface_.DrawTexture(flower_texture_.get(), nullptr, &std::get<const SDL_Rect&>(pair));
-        //surface_.FillRect(std::get<const SDL_Rect&>(pair), std::get<const SDL_Color&>(pair));
+        // surface_.FillRect(std::get<const SDL_Rect&>(pair), std::get<const SDL_Color&>(pair));
     });
 }
 

@@ -13,7 +13,7 @@ public:
     virtual void setConfig(const domain::Config &config) = 0;
     virtual void draw(const domain::State &state) = 0;
     [[nodiscard]] virtual std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
-    getCommand(domain::GameStatus status) = 0;
+    getCommand(const domain::State& state) = 0;
 };
 
 } // namespace render

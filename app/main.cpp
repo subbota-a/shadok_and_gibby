@@ -31,7 +31,7 @@ int main()
 
     for (bool quit = false; !quit;) {
         render->draw(logic.getState());
-        auto command = render->getCommand(logic.getState().game_status);
+        auto command = render->getCommand(logic.getState());
         std::visit(
                 overloaded{
                         [&](const domain::QuitCommand &) { quit = true; },
