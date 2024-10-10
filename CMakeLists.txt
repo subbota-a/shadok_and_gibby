@@ -3,6 +3,7 @@ project(ShadokAndGibby)
 
 set(CMAKE_CXX_STANDARD 23)
 
+add_subdirectory(paths)
 add_subdirectory(domain)
 add_subdirectory(logic)
 add_subdirectory(render)

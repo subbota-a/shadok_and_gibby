@@ -1,5 +1,6 @@
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
+find_package(SDL2_ttf REQUIRED)
 
 set(_target render)
 add_library(${_target}
@@ -18,8 +19,8 @@ add_library(${_target}
     deleters.cpp
 )
 target_link_libraries(${_target}
-    PUBLIC domain
-    PRIVATE SDL2::SDL2 SDL2_image::SDL2_image
+    PUBLIC domain paths
+    PRIVATE SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf
 )
 target_include_directories(${_target} PUBLIC include)
 target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")

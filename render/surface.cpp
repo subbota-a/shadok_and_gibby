@@ -53,6 +53,7 @@ void Surface::DrawLine(SDL_Point from, SDL_Point to, SDL_Color color) const
 }
 void Surface::FillRect(const SDL_Rect rect, SDL_Color color) const
 {
+    SDL_SetRenderDrawBlendMode(renderer_.get(), SDL_BLENDMODE_BLEND);
     SetColor(color);
     SDL_RenderFillRect(renderer_.get(), &rect);
 }

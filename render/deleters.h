@@ -5,6 +5,7 @@ struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
 struct SDL_Surface;
+struct _TTF_Font;
 
 template<>
 struct std::default_delete<SDL_Window> {
@@ -24,4 +25,9 @@ struct std::default_delete<SDL_Texture> {
 template<>
 struct std::default_delete<SDL_Surface> {
     void operator()(SDL_Surface* p) const noexcept;
+};
+
+template<>
+struct std::default_delete<_TTF_Font> {
+    void operator()(_TTF_Font* p) const noexcept;
 };

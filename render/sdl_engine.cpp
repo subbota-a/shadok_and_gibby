@@ -4,6 +4,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 
 #include <chrono>
 #include <iostream>
@@ -11,25 +12,65 @@
 #include <thread>
 #include <vector>
 
+#include <format>
+
 using namespace std::string_literals;
 
 namespace render {
 
 namespace {
 
-    SDL_Rect getCell(const domain::Position& position, const int edge) noexcept
+    SDL_Rect getCell(const domain::Position& position, const int edge, const SDL_Rect& field) noexcept
     {
-        return {position[0] * edge, position[1] * edge, edge, edge};
-    }
-
-    SDL_Color getFlowerColor(const int score, const int min, const int range) noexcept
-    {
-        return {0, static_cast<Uint8>(55 + 200 * (score - min) / range), 0, 255};
+        return {field.x + position[0] * edge, field.y + field.h - edge - position[1] * edge, edge, edge};
     }
 
     int getFlowerAlpha(const int score, const int min, const int range) noexcept
     {
         return static_cast<Uint8>(55 + 200 * (score - min) / range);
+    }
+
+    enum Alignement : uint8_t {
+        LEFT = 0x1,
+        RIGHT = 0x2,
+        CENTER_HOR = LEFT | RIGHT,
+        TOP = 0x4,
+        BOTTOM = 0x8,
+        CENTER_VER = TOP | BOTTOM
+    };
+
+    SDL_Rect alignInRect(
+            const int width,
+            const int height,
+            SDL_Rect frame,
+            const uint8_t alignment,
+            const int hor_padding,
+            const int ver_padding) noexcept
+    {
+        frame.y += ver_padding;
+        frame.h -= 2 * ver_padding;
+        frame.x += hor_padding;
+        frame.w -= 2 * hor_padding;
+        SDL_Rect result{frame};
+        if ((alignment & CENTER_HOR) == CENTER_HOR) {
+            result.x += (frame.w - width) / 2;
+            result.w = width;
+        } else if (alignment & LEFT) {
+            result.w = width;
+        } else if (alignment & RIGHT) {
+            result.x = frame.x + frame.w - width;
+            result.w = width;
+        }
+        if ((alignment & CENTER_VER) == CENTER_VER) {
+            result.y += (frame.h - height) / 2;
+            result.h = height;
+        } else if (alignment & TOP) {
+            result.h = height;
+        } else if (alignment & BOTTOM) {
+            result.y = frame.y + frame.h - height;
+            result.h = height;
+        }
+        return result;
     }
 
     int GetMinimumEdgeSize(const int display)
@@ -50,6 +91,11 @@ SdlGuard::SdlGuard() : _impl(this, &SdlGuard::deleter)
         SDL_Quit();
         throw std::runtime_error("SDL image could not initialize! IMG_Error: "s + IMG_GetError());
     }
+    if (TTF_Init() < 0) {
+        IMG_Quit();
+        SDL_Quit();
+        throw std::runtime_error("SDL ttf could not initialize! TTF_Error: "s + TTF_GetError());
+    }
 }
 void SdlGuard::deleter(SdlGuard*)
 {
@@ -57,7 +103,7 @@ void SdlGuard::deleter(SdlGuard*)
     SDL_Quit();
 }
 
-SdlEngine::SdlEngine() : sdl_library_{}, surface_{}, cell_size_(0), out_height_(0)
+SdlEngine::SdlEngine()
 {
     UpdateWindowSize();
     Resources resources(PROJECT_NAME);
@@ -76,7 +122,7 @@ void SdlEngine::draw(const domain::State& state)
     if (!config_) {
         throw std::logic_error("No config specified");
     }
-    prepareDimensions();
+    calcLayout(state.game_status);
 
     constexpr auto background_color = SDL_Color(0, 0, 0, 255);
     surface_.Clear(background_color);
@@ -85,6 +131,7 @@ void SdlEngine::draw(const domain::State& state)
     drawPlayer(state.player);
     drawFlowers(state.flowers);
     drawStatus(state);
+    drawMessage(state.game_status);
 
     surface_.Present();
 }
@@ -92,10 +139,8 @@ void SdlEngine::draw(const domain::State& state)
 std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
 SdlEngine::getCommand(const domain::State& state)
 {
-    if (state.game_status == domain::GameStatus::EnemiesTurn) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (state.game_status == domain::GameStatus::EnemiesTurn)
         return domain::MoveEnemiesCommand();
-    }
     SDL_Event event;
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_QUIT) {
@@ -140,9 +185,11 @@ SdlEngine::getCommand(const domain::State& state)
             }
         }
         if (event.type == SDL_WINDOWEVENT) {
-            draw(state);
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED || event.window.event == SDL_WINDOWEVENT_EXPOSED) {
-            } else if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
+            if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
+                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                draw(state);
+            }
+            if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
                 UpdateWindowSize();
             }
         }
@@ -150,25 +197,50 @@ SdlEngine::getCommand(const domain::State& state)
     return domain::QuitCommand();
 }
 
-void SdlEngine::prepareDimensions()
+void SdlEngine::UpdateWindowSize()
+{
+    const auto edge = GetMinimumEdgeSize(surface_.GetWindowDisplayIndex());
+    surface_.ResizeWindow(edge, edge);
+
+    float hdpi, vdpi;
+    SDL_GetDisplayDPI(surface_.GetWindowDisplayIndex(), nullptr, &hdpi, &vdpi);
+    const Resources resources(PROJECT_NAME);
+    large_font_ = resources.loadFontDPI(
+            "Days.otf",
+            48,
+            static_cast<unsigned>(std::round(hdpi)),
+            static_cast<unsigned>(std::round(vdpi)));
+    small_font_ = resources.loadFontDPI(
+            "Days.otf",
+            24,
+            static_cast<unsigned>(std::round(hdpi)),
+            static_cast<unsigned>(std::round(vdpi)));
+    std::unique_ptr<SDL_Surface> text(
+            TTF_RenderText_Solid(large_font_.get(), "Scores:", SDL_Color{255, 255, 255, 255}));
+    font_size_ = text->h;
+    std::cout << "Display index " << surface_.GetWindowDisplayIndex() << " hdpi " << hdpi << " vdpi " << vdpi
+              << " font_size " << font_size_ << std::endl;
+}
+
+void SdlEngine::calcLayout(const domain::GameStatus status)
 {
     const auto out = surface_.OutputSize();
-    out_height_ = out.y;
-    cell_size_ = (domain::Size(out.x, out.y) / config_->field_size).minCoeff();
+    const int panel_height = 1.2 * font_size_;
+    status_rect_ = SDL_Rect{0, 0, out.x, panel_height};
+    field_rect_ = SDL_Rect{0, status_rect_.x + status_rect_.h, out.x, out.y - status_rect_.h};
+    const int coeff = (domain::Size(field_rect_.w, field_rect_.h) / config_->field_size).minCoeff();
+    field_rect_.x += (field_rect_.w - coeff * config_->field_size[0]) / 2;
+    field_rect_.w = coeff * config_->field_size[0];
+    field_rect_.y += (field_rect_.h - coeff * config_->field_size[1]) / 2;
+    field_rect_.h = coeff * config_->field_size[1];
+    cell_size_ = field_rect_.w / config_->field_size[0];
 }
 
 std::vector<SDL_Rect> SdlEngine::getCells(const std::vector<domain::Position>& positions) const
 {
     std::vector<SDL_Rect> cells(positions.size());
-    std::ranges::transform(positions, cells.begin(), std::bind_back(&getCell, cell_size_));
-    std::ranges::for_each(cells, [this](auto& cell) { cell.y = out_height_ - cell.y - cell.h; });
+    std::ranges::transform(positions, cells.begin(), std::bind_back(&getCell, cell_size_, field_rect_));
     return cells;
-}
-
-void SdlEngine::UpdateWindowSize() const
-{
-    const auto edge = GetMinimumEdgeSize(surface_.GetWindowDisplayIndex());
-    surface_.ResizeWindow(edge, edge);
 }
 
 std::vector<Uint8> SdlEngine::getFlowersAlpha(const std::vector<unsigned>& scores) const
@@ -186,16 +258,14 @@ std::vector<Uint8> SdlEngine::getFlowersAlpha(const std::vector<unsigned>& score
 
 void SdlEngine::drawEnemies(const domain::Enemies& enemies) const
 {
-    constexpr auto color = SDL_Color(255, 0, 0, 255);
     for (auto& cell: getCells(enemies.position)) {
         surface_.DrawTexture(enemy_texture_.get(), nullptr, &cell);
     }
 }
+
 void SdlEngine::drawPlayer(const domain::Player& player) const
 {
-    constexpr auto color = SDL_Color(0, 0, 255, 255);
-    auto cell = getCell(player.position, cell_size_);
-    cell.y = out_height_ - cell.y - cell.h;
+    auto cell = getCell(player.position, cell_size_, field_rect_);
 
     int w, h;
     SDL_QueryTexture(shadok_texture_.get(), nullptr, nullptr, &w, &h);
@@ -212,26 +282,84 @@ void SdlEngine::drawFlowers(const domain::Flowers& flowers) const
     std::ranges::for_each(std::ranges::views::zip(rects, alphas), [this](const auto& pair) {
         SDL_SetTextureAlphaMod(flower_texture_.get(), std::get<const Uint8&>(pair));
         surface_.DrawTexture(flower_texture_.get(), nullptr, &std::get<const SDL_Rect&>(pair));
-        // surface_.FillRect(std::get<const SDL_Rect&>(pair), std::get<const SDL_Color&>(pair));
     });
+}
+
+SDL_Color SdlEngine::getStatusColor(const domain::GameStatus game_status)
+{
+    switch (game_status) {
+    case domain::GameStatus::PlayerWon:
+        return SDL_Color{0, 255, 0, 255};
+    case domain::GameStatus::PlayerLost:
+        return SDL_Color{255, 0, 0, 255};
+    default:
+        return SDL_Color{255, 255, 255, 255};
+    }
 }
 
 void SdlEngine::drawStatus(const domain::State& state) const
 {
-    std::cout << "Scores: " << state.player.scores << ", steps: " << state.player.steps << std::endl;
+    const auto status_text = std::format("Scores: {}, steps: {}", state.player.scores, state.player.steps);
 
-    switch (state.game_status) {
-    case domain::GameStatus::PlayerTurn:
-        [[fallthrough]];
-    case domain::GameStatus::EnemiesTurn:
-        break;
+    getStatusColor(state.game_status);
+    std::unique_ptr<SDL_Surface> text_surface(
+            TTF_RenderText_Solid(large_font_.get(), status_text.c_str(), getStatusColor(state.game_status)));
+    std::unique_ptr<SDL_Texture> text_texture{SDL_CreateTextureFromSurface(surface_.Renderer(), text_surface.get())};
+    SDL_Rect text_rect = alignInRect(
+            text_surface->w,
+            text_surface->h,
+            status_rect_,
+            Alignement::LEFT | Alignement::CENTER_VER,
+            font_size_ / 2,
+            0);
+    surface_.DrawTexture(text_texture.get(), nullptr, &text_rect);
+}
+
+void SdlEngine::drawMessage(const domain::GameStatus& state) const
+{
+    std::string message;
+    switch (state) {
     case domain::GameStatus::PlayerWon:
-        std::cout << "Player Won!" << std::endl;
+        message = "You've won!";
         break;
     case domain::GameStatus::PlayerLost:
-        std::cout << "Player Lost!" << std::endl;
+        message = "You've lost!";
         break;
+    default:
+        return;
     }
+    std::unique_ptr<SDL_Surface> result_text_surface(
+            TTF_RenderText_Solid(large_font_.get(), message.c_str(), SDL_Color{255, 255, 255, 255}));
+    std::unique_ptr<SDL_Texture> result_text_texture{
+            SDL_CreateTextureFromSurface(surface_.Renderer(), result_text_surface.get())};
+    std::unique_ptr<SDL_Surface> prompt_text_surface(
+            TTF_RenderText_Solid(small_font_.get(), "Continue, Y/N?", SDL_Color{252, 255, 51, 255}));
+    std::unique_ptr<SDL_Texture> prompt_text_texture{
+            SDL_CreateTextureFromSurface(surface_.Renderer(), prompt_text_surface.get())};
+    const auto padding = result_text_surface->h / 8;
+    const SDL_Rect panel_rect = alignInRect(
+            std::max(result_text_surface->w, prompt_text_surface->w) + 4 * padding,
+            result_text_surface->h + prompt_text_surface->h + 2 * padding,
+            field_rect_,
+            Alignement::CENTER_HOR | Alignement::CENTER_VER,
+            0,0);
+    surface_.FillRect(panel_rect, SDL_Color{255, 255, 255, 80});
+    const SDL_Rect result_text_rect = alignInRect(
+            result_text_surface->w,
+            result_text_surface->h,
+            panel_rect,
+            Alignement::CENTER_HOR | Alignement::TOP,
+            2 * padding,
+            padding);
+    surface_.DrawTexture(result_text_texture.get(), nullptr, &result_text_rect);
+    const SDL_Rect prompt_text_rect = alignInRect(
+            prompt_text_surface->w,
+            prompt_text_surface->h,
+            panel_rect,
+            Alignement::CENTER_HOR | Alignement::BOTTOM,
+            2 * padding,
+            padding);
+    surface_.DrawTexture(prompt_text_texture.get(), nullptr, &prompt_text_rect);
 }
 
 } // namespace render
