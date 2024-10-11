@@ -4,5 +4,4 @@
 requirements:
   - "tomlplusplus/3.4.0"
   - "mdspan/0.6.0"
-  - "cli11/2.4.2"
   - "eigen/3.4.0"

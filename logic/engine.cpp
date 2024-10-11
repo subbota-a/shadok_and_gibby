@@ -43,8 +43,8 @@ domain::Position internal::ObjectMap::placeObject(const ObjectType object)
     for (;;) {
         auto x = x_gen(rng_);
         auto y = y_gen(rng_);
-        if (objects[x, y] == ObjectType::Empty) {
-            objects[x, y] = object;
+        if (objects(x, y) == ObjectType::Empty) {
+            objects(x, y) = object;
             return {x, y};
         }
     }
@@ -53,13 +53,13 @@ domain::Position internal::ObjectMap::placeObject(const ObjectType object)
 ObjectType internal::ObjectMap::getType(domain::Position pos) const
 {
     const auto objects = mdspan(objects_bitmap_.data(), width_, height_);
-    return objects[pos[0], pos[1]];
+    return objects(pos[0], pos[1]);
 }
 
 void internal::ObjectMap::setType(domain::Position pos, ObjectType type)
 {
     const auto objects = mdspan(objects_bitmap_.data(), width_, height_);
-    objects[pos[0], pos[1]] = type;
+    objects(pos[0], pos[1]) = type;
 }
 
 internal::ScoreGenerator::ScoreGenerator(const unsigned min, const unsigned max)

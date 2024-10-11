@@ -139,8 +139,9 @@ void SdlEngine::draw(const domain::State& state)
 std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
 SdlEngine::getCommand(const domain::State& state)
 {
-    if (state.game_status == domain::GameStatus::EnemiesTurn)
+    if (state.game_status == domain::GameStatus::EnemiesTurn) {
         return domain::MoveEnemiesCommand();
+    }
     SDL_Event event;
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_QUIT) {
@@ -279,10 +280,12 @@ void SdlEngine::drawFlowers(const domain::Flowers& flowers) const
 {
     const auto rects = getCells(flowers.positions);
     const auto alphas = getFlowersAlpha(flowers.scores);
-    std::ranges::for_each(std::ranges::views::zip(rects, alphas), [this](const auto& pair) {
-        SDL_SetTextureAlphaMod(flower_texture_.get(), std::get<const Uint8&>(pair));
-        surface_.DrawTexture(flower_texture_.get(), nullptr, &std::get<const SDL_Rect&>(pair));
-    });
+    std::ranges::for_each(
+            std::ranges::views::zip(rects, alphas),
+            [this](const std::tuple<const SDL_Rect&, const Uint8&>& pair) {
+                SDL_SetTextureAlphaMod(flower_texture_.get(), std::get<const Uint8&>(pair));
+                surface_.DrawTexture(flower_texture_.get(), nullptr, &std::get<const SDL_Rect&>(pair));
+            });
 }
 
 SDL_Color SdlEngine::getStatusColor(const domain::GameStatus game_status)
@@ -342,7 +345,8 @@ void SdlEngine::drawMessage(const domain::GameStatus& state) const
             result_text_surface->h + prompt_text_surface->h + 2 * padding,
             field_rect_,
             Alignement::CENTER_HOR | Alignement::CENTER_VER,
-            0,0);
+            0,
+            0);
     surface_.FillRect(panel_rect, SDL_Color{255, 255, 255, 80});
     const SDL_Rect result_text_rect = alignInRect(
             result_text_surface->w,

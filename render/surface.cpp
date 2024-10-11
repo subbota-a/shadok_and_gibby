@@ -1,4 +1,8 @@
 #include "surface.h"
+
+#include <cmath>
+#include <stdexcept>
+
 namespace render {
 
 Surface::Surface()

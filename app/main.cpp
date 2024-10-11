@@ -34,7 +34,7 @@ domain::Config getConfig(const std::filesystem::path& config_filepath)
     if (exists(config_filepath)) {
         toml::parse_result result = toml::parse_file(config_filepath.c_str());
         if (!result) {
-            std::cerr << "Configuration file '" << config_filepath.c_str() << "' parsing failed: " << result.error()
+            std::cerr << "Configuration file '" << config_filepath << "' parsing failed: " << result.error()
                       << std::endl;
         } else {
             auto& table = result.table();
@@ -72,7 +72,8 @@ void saveConfig(const domain::Config& config, const std::filesystem::path& path)
             {"max_player_steps", config.max_player_steps},
             {"min_player_scores", config.min_player_scores},
     };
-    std::ofstream out{path, std::ios::out};
+    std::ofstream out;
+    out.open(path, std::ios::out);
     if (!out) {
         std::cerr << "Failed to create config file '" << path << "'" << std::endl;
     } else {
@@ -93,15 +94,19 @@ int main()
     logic::Engine logic(config);
     logic.startGame();
 
-    for (bool quit = false; !quit;) {
-        render->draw(logic.getState());
-        auto command = render->getCommand(logic.getState());
-        std::visit(
-                overloaded{
-                        [&](const domain::QuitCommand&) { quit = true; },
-                        [&](const domain::MoveCommand& move) { logic.movePlayer(move.direction); },
-                        [&](const domain::MoveEnemiesCommand&) { logic.moveEnemies(); },
-                        [&](const domain::StartCommand&) { logic.startGame(); }},
-                command);
+    try {
+        for (bool quit = false; !quit;) {
+            render->draw(logic.getState());
+            auto command = render->getCommand(logic.getState());
+            std::visit(
+                    overloaded{
+                            [&](const domain::QuitCommand&) { quit = true; },
+                            [&](const domain::MoveCommand& move) { logic.movePlayer(move.direction); },
+                            [&](const domain::MoveEnemiesCommand&) { logic.moveEnemies(); },
+                            [&](const domain::StartCommand&) { logic.startGame(); }},
+                    command);
+        }
+    }catch(const std::exception& e){
+        std::cerr << e.what() << std::endl;
     }
 }
