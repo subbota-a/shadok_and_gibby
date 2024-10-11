@@ -11,6 +11,7 @@ add_subdirectory(app)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     install(DIRECTORY assets DESTINATION . )
+    install(FILES README.md DESTINATION .)
 else()
     install(DIRECTORY assets DESTINATION share/${CMAKE_PROJECT_NAME} )
 endif ()
