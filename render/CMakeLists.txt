@@ -22,6 +22,13 @@ target_link_libraries(${_target}
     PUBLIC domain paths
     PRIVATE SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf
 )
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+    target_link_libraries(${_target}
+        PRIVATE Shcore
+        INTERFACE SDL2::SDL2main
+    )
+endif()
+
 target_include_directories(${_target} PUBLIC include)
 target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")
 

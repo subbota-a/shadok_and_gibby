@@ -5,6 +5,8 @@
 #define TOML_EXCEPTIONS 0
 #include <toml++/toml.hpp>
 
+#include <SDL2/SDL_main.h>
+
 #include <iostream>
 #include <variant>
 
@@ -27,7 +29,7 @@ domain::Config getConfig(const std::filesystem::path& config_filepath)
             .field_size = {20, 20},
             .number_of_enemies = 4,
             .number_of_flowers = 15,
-            .flower_scores_range = {1, 10},
+            .flower_scores_range = {5, 10},
             .max_player_steps = 100,
             .min_player_scores = 100,
     };
@@ -82,7 +84,7 @@ void saveConfig(const domain::Config& config, const std::filesystem::path& path)
     }
 }
 
-int main()
+int main(int, char**)
 {
     const auto config = getConfig(getConfigPath());
     if (!validateConfig(config)) {
@@ -108,5 +110,7 @@ int main()
         }
     }catch(const std::exception& e){
         std::cerr << e.what() << std::endl;
+        return 1;
     }
+    return 0;
 }

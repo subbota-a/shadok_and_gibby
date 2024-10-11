@@ -1,7 +1,12 @@
 find_package(tomlplusplus REQUIRED)
 
 set(_target shadok_and_gibby)
-add_executable(${_target}
+
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+add_executable(${_target} WIN32)
+endif()
+
+target_sources(${_target} PRIVATE
     main.cpp
 )
 
