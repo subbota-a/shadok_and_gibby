@@ -18,6 +18,7 @@ public:
     void DrawPolyline(const std::vector<SDL_Point>& polyline, SDL_Color color) const;
     void DrawLine(SDL_Point from, SDL_Point to, SDL_Color color) const;
     void FillRect(SDL_Rect rect, SDL_Color color) const;
+    void DrawRect(SDL_Rect rect, SDL_Color color) const;
     void DrawTexture(const SDL_Texture* texture, const SDL_Rect* src, const SDL_Rect* dest) const;
     [[nodiscard]] SDL_Point OutputSize() const;
     [[nodiscard]] SDL_Point FromWindow(SDL_Point window_point) const;

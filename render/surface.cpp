@@ -1,17 +1,32 @@
 #include "surface.h"
 
+#include <SDL_events.h>
 #include <cmath>
 #include <stdexcept>
 
 namespace render {
+namespace {
+    SDL_Point MinDisplaySize()
+    {
+        const auto displays = SDL_GetNumVideoDisplays();
+        SDL_Point result{SDL_MAX_SINT16, SDL_MAX_SINT16};
+        for(int i = 0; i < displays; ++i) {
+            SDL_Rect rect;
+            SDL_GetDisplayUsableBounds(i, &rect);
+            result.x = std::min(result.x, rect.w);
+            result.y = std::min(result.y, rect.h);
+        }
+        return result;
+    }
+}
 
 Surface::Surface()
     : window_(SDL_CreateWindow(
               "Shadok and Gibby",
               SDL_WINDOWPOS_UNDEFINED,
               SDL_WINDOWPOS_UNDEFINED,
-              900,
-              900,
+              MinDisplaySize().y * 80 / 100,
+              MinDisplaySize().y * 87 / 100,
               SDL_WINDOW_ALLOW_HIGHDPI|SDL_WINDOW_RESIZABLE))
 {
     if (!window_) {
@@ -71,11 +86,19 @@ void Surface::DrawLine(SDL_Point from, SDL_Point to, SDL_Color color) const
     SetColor(color);
     SDL_RenderDrawLine(renderer_.get(), from.x, from.y, to.x, to.y);
 }
+
 void Surface::FillRect(const SDL_Rect rect, SDL_Color color) const
 {
     SDL_SetRenderDrawBlendMode(renderer_.get(), SDL_BLENDMODE_BLEND);
     SetColor(color);
     SDL_RenderFillRect(renderer_.get(), &rect);
+}
+
+void Surface::DrawRect(const SDL_Rect rect, SDL_Color color) const
+{
+    SDL_SetRenderDrawBlendMode(renderer_.get(), SDL_BLENDMODE_BLEND);
+    SetColor(color);
+    SDL_RenderDrawRect(renderer_.get(), &rect);
 }
 
 void Surface::DrawTexture(const SDL_Texture* texture, const SDL_Rect* src, const SDL_Rect* dest) const

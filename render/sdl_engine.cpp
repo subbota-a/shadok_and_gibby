@@ -248,7 +248,7 @@ void SdlEngine::calcLayout(const domain::GameStatus status)
     const int coeff = (domain::Size(field_rect_.w, field_rect_.h) / config_->field_size).minCoeff();
     field_rect_.x += (field_rect_.w - coeff * config_->field_size[0]) / 2;
     field_rect_.w = coeff * config_->field_size[0];
-    //field_rect_.y += (field_rect_.h - coeff * config_->field_size[1]) / 2;
+    // field_rect_.y += (field_rect_.h - coeff * config_->field_size[1]) / 2;
     field_rect_.h = coeff * config_->field_size[1];
     cell_size_ = field_rect_.w / config_->field_size[0];
 }
@@ -295,13 +295,7 @@ void SdlEngine::drawEnemies(const domain::Enemies& enemies) const
 
 void SdlEngine::drawPlayer(const domain::Player& player) const
 {
-    auto cell = getCell(player.position, cell_size_, field_rect_);
-
-    int w, h;
-    SDL_QueryTexture(shadok_texture_.get(), nullptr, nullptr, &w, &h);
-    w = static_cast<int>(std::round(cell.h * static_cast<double>(w) / static_cast<double>(h)));
-    cell.x += (cell.w - w) / 2;
-    cell.w = w;
+    const auto cell = getCell(player.position, cell_size_, field_rect_);
     surface_.DrawTexture(shadok_texture_.get(), nullptr, &cell);
 }
 
@@ -343,7 +337,7 @@ void SdlEngine::drawStatus(const domain::State& state) const
             text_surface->h,
             status_rect_,
             Alignement::LEFT | Alignement::CENTER_VER,
-            font_size_ / 2,
+            field_rect_.x,
             0);
     surface_.DrawTexture(text_texture.get(), nullptr, &text_rect);
 }
