@@ -1,10 +1,11 @@
-# Шадок и Гиби
+# Shadok and Gibby
+![screenshot](doc/screenshot.png)
 
-Игра взята из
-книги [Программирование игр и головоломок. Жак Арсак](https://coollib.in/b/181686-zhak-arsak-programmirovanie-igr-i-golovolomok/read),
-игра №8.
+The game take over from the book
+[Программирование игр и головоломок. Жак Арсак](https://coollib.in/b/181686-zhak-arsak-programmirovanie-igr-i-golovolomok/read),
+game #8.
 
-## Художественное описание игры
+## Quote from the book 
 
 У шадоков ситуация удовлетворительна. Испытания ракет продолжаются, постоянно кончаясь неудачами.
 
@@ -20,32 +21,34 @@
 позволили шадоку забраться в один из их огородов, но окружили его со всех сторон, и всякий раз, когда растение
 расцветает и дает транзистор, они мчатся, чтобы собрать урожай прежде шадока.
 
-## Описание игры
+## Description
 
-Вы - Шадок и попадаете на поле с цветами и врагами (Гибби, выглядят как вирусы).
-Вы можете двигаться по горизонтали, вертикали и диагонали. Ваша цель - съесть цветы, которые приносят очки. 
-За 100 шагов нужно успеть набрать 100 очков. Цветы приносят разное количество очков - чем он ярче - тем больше даёт очков.
-Как только цветок съеден - в свободном месте возникает другой.
-Гибби мешают собирать цветы Шадоку. Они стараются, чтобы Шадок ходил, но не собирал цветы.
+You are Shadok and you are int the field with flowers and Gibbies.
+You can move horizontally, vertically and diagonally on one step. 
+Your goal is to eat the flowers which bring the scores. 
+You have to score points within 100 steps. 
+The flowers bring different amount of scores, the brighter the more.
+As soon as the flower is eaten, a new one grows at a random place.
+Gibby prevents Shadok from eating flowers.
 
-## Управление игрой
+## Keys
 
-| Направление  | Клавиша цифрового блока | Клавиша |
-|--------------|-------------------------|---------|
-| Вверх        | 8                       | E       |
-| Влево        | 4                       | S       |
-| Вправо       | 6                       | D       |
-| Вниз         | 2                       | X       |
-| Вверх-Влево  | 7                       | W       |
-| Вверх-Вправо | 9                       | R       |
-| Вниз-Влево   | 1                       | Z       |
-| Вниз-Вправо  | 3                       | C       |
+| Direction  | Numpad key | Key |
+|------------|-----------------------------------|-----|
+| Up         | 8                                 | E   |
+| Left       | 4                                 | S   |
+| Right      | 6                                 | D   |
+| Down       | 2                                 | X   |
+| Up-Left    | 7                                 | W   |
+| Up-Right   | 9                                 | R   |
+| Down-Left  | 1                                 | Z   |
+| Down-Right | 3                                 | C   |
 
-Ходить можно только на свободное поле.
+You can move only to an empty space.
 
-## Настройки игры
-Файл настроек `ShadokAndGibby.toml` находится:
+## Config file
+Config file `ShadokAndGibby.toml` is at:
 - Windows: <LOCALAPPDATA>
 - Linux: <HOME>/.config
 
-Вы можете изменить размер поля, количество Гибби, количество цветов, их очки, количество шагов и очков для победы.
+You can change the size of the field, the number of Gibbies, the number of colors, their points, the number of steps and points to win.
