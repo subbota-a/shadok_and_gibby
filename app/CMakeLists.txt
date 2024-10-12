@@ -24,9 +24,3 @@ target_link_libraries(${_target}
     tomlplusplus::tomlplusplus
 )
 target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    install(TARGETS ${_target} DESTINATION .)
-else ()
-    install(TARGETS ${_target})
-endif ()

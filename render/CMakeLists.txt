@@ -31,12 +31,3 @@ endif()
 
 target_include_directories(${_target} PUBLIC include)
 target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    install(FILES
-        ${CMAKE_BINARY_DIR}/conan/build/${CMAKE_BUILD_TYPE}/SDL2$<$<CONFIG:Debug>:d>.dll
-        ${CMAKE_BINARY_DIR}/conan/build/${CMAKE_BUILD_TYPE}/SDL2_image$<$<CONFIG:Debug>:d>.dll
-        ${CMAKE_BINARY_DIR}/conan/build/${CMAKE_BUILD_TYPE}/SDL2_ttf.dll
-        DESTINATION .)
-else ()
-endif ()
