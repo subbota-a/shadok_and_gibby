@@ -14,14 +14,6 @@
 
 #include <format>
 
-#if defined _WINDOWS
-#define WIN32_LEAN_AND_MEAN
-// #include <Windows.h>
-#include <shellscalingapi.h>
-#undef min
-#undef max
-#endif
-
 using namespace std::string_literals;
 
 namespace render {
@@ -99,9 +91,6 @@ namespace {
 
 SdlGuard::SdlGuard() : _impl(this, &SdlGuard::deleter)
 {
-#if defined _WINDOWS
-    SetProcessDpiAwareness(PROCESS_DPI_AWARENESS::PROCESS_PER_MONITOR_DPI_AWARE);
-#endif
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw std::runtime_error("SDL could not initialize! SDL_Error: "s + SDL_GetError());
     }

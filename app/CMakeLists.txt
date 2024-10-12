@@ -4,6 +4,9 @@ set(_target shadok_and_gibby)
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_executable(${_target} WIN32)
+    target_sources(${_target} PUBLIC
+        windows/resources.rc windows/manifest.manifest
+    )
 else()
     add_executable(${_target})
 endif ()

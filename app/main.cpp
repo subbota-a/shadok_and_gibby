@@ -7,8 +7,14 @@
 
 #include <SDL2/SDL_main.h>
 
+#include <format>
 #include <iostream>
 #include <variant>
+
+#ifdef _WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 
 // helper type for the visitor #4
 template<class... Ts>
@@ -18,6 +24,19 @@ struct overloaded : Ts... {
 // explicit deduction guide (not needed as of C++20)
 template<class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
+
+#ifdef _WINDOWS
+void showError(const char* message)
+{
+    MessageBoxA(nullptr, message, "Error", MB_OK | MB_ICONERROR);
+}
+#endif
+#if defined(linux)
+void showError(const char* message)
+{
+    std::cerr << message << std::endl;
+}
+#endif
 
 std::filesystem::path getConfigPath()
 {
@@ -36,8 +55,11 @@ domain::Config getConfig(const std::filesystem::path& config_filepath)
     if (exists(config_filepath)) {
         toml::parse_result result = toml::parse_file(config_filepath.c_str());
         if (!result) {
-            std::cerr << "Configuration file '" << config_filepath << "' parsing failed: " << result.error()
-                      << std::endl;
+            showError(std::format(
+                              "Configuration file '{}' parsing failed: {}",
+                              config_filepath.string(),
+                              result.error().description())
+                              .c_str());
         } else {
             auto& table = result.table();
             config.field_size[0] = table["field_width"].value_or(config.field_size[0]);
@@ -56,7 +78,7 @@ domain::Config getConfig(const std::filesystem::path& config_filepath)
 bool validateConfig(const domain::Config& config)
 {
     if (config.flower_scores_range.first >= config.flower_scores_range.second) {
-        std::cerr << "Invalid flowers scores range, flower_scores_min < flower_scores_max expected." << std::endl;
+        showError("Invalid flowers scores range, flower_scores_min < flower_scores_max expected.");
         return false;
     }
     return true;
@@ -77,26 +99,26 @@ void saveConfig(const domain::Config& config, const std::filesystem::path& path)
     std::ofstream out;
     out.open(path, std::ios::out);
     if (!out) {
-        std::cerr << "Failed to create config file '" << path << "'" << std::endl;
+        showError(std::format("Failed to create config file '{}'", path.string()).c_str());
     } else {
-        out << "# Shadok and Gibby config\n";
+        out << "# Shadok and Gibby config\n\n";
         out << tbl << std::endl;
     }
 }
 
 int main(int, char**)
 {
-    const auto config = getConfig(getConfigPath());
-    if (!validateConfig(config)) {
-        return 1;
-    }
-    saveConfig(config, getConfigPath());
-    const auto render = render::create_sdl_engine();
-    render->setConfig(config);
-    logic::Engine logic(config);
-    logic.startGame();
-
     try {
+        const auto config = getConfig(getConfigPath());
+        if (!validateConfig(config)) {
+            return 1;
+        }
+        saveConfig(config, getConfigPath());
+        const auto render = render::create_sdl_engine();
+        render->setConfig(config);
+        logic::Engine logic(config);
+        logic.startGame();
+
         for (bool quit = false; !quit;) {
             render->draw(logic.getState());
             auto command = render->getCommand(logic.getState());
@@ -108,8 +130,8 @@ int main(int, char**)
                             [&](const domain::StartCommand&) { logic.startGame(); }},
                     command);
         }
-    }catch(const std::exception& e){
-        std::cerr << e.what() << std::endl;
+    } catch (const std::exception& e) {
+        showError(e.what());
         return 1;
     }
     return 0;
