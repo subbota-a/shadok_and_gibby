@@ -35,12 +35,15 @@ private:
     std::unique_ptr<SDL_Texture> enemy_texture_;
     std::unique_ptr<SDL_Texture> shadok_texture_;
     std::unique_ptr<SDL_Texture> flower_texture_;
+    std::unique_ptr<SDL_Texture> grass_texture_;
+    SDL_Point grass_size_;
     int font_size_{};
     SDL_Rect status_rect_{};
     SDL_Rect field_rect_{};
     int cell_size_{};
 
     void calcLayout(domain::GameStatus status);
+    void drawField() const;
     void drawEnemies(const domain::Enemies& enemies) const;
     void drawPlayer(const domain::Player& player) const;
     [[nodiscard]] std::vector<Uint8> getFlowersAlpha(const std::vector<unsigned>& scores) const;
@@ -49,7 +52,7 @@ private:
     void drawStatus(const domain::State& state) const;
     void drawMessage(const domain::GameStatus& state) const;
     [[nodiscard]] std::vector<SDL_Rect> getCells(const std::vector<domain::Position>& positions) const;
-    void UpdateWindowSize();
+    void reloadResources();
 };
 
 } // namespace render

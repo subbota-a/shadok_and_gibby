@@ -16,7 +16,7 @@
 
 #if defined _WINDOWS
 #define WIN32_LEAN_AND_MEAN
-//#include <Windows.h>
+// #include <Windows.h>
 #include <shellscalingapi.h>
 #undef min
 #undef max
@@ -36,7 +36,7 @@ namespace {
     int getFlowerAlpha(const int score, const int min, const int range) noexcept
     {
         constexpr auto min_alpha = 100;
-        return static_cast<Uint8>(min_alpha + (255-min_alpha) * (score - min) / range);
+        return static_cast<Uint8>(min_alpha + (255 - min_alpha) * (score - min) / range);
     }
 
     enum Alignement : uint8_t {
@@ -82,11 +82,17 @@ namespace {
         return result;
     }
 
-    int GetMinimumEdgeSize(const int display)
+    SDL_Rect FitWindow(const int display, const SDL_Rect& window_bounds) noexcept
     {
-        SDL_Rect bounds;
-        SDL_GetDisplayUsableBounds(display, &bounds);
-        return std::min(bounds.w, bounds.h) * 9 / 10;
+        SDL_Rect usable_bounds;
+        SDL_GetDisplayUsableBounds(display, &usable_bounds);
+        SDL_Rect result;
+        result.w = result.h = std::min(usable_bounds.w, usable_bounds.h) * 9 / 10;
+        // result.x = window_bounds.x + std::min(usable_bounds.x + usable_bounds.w - window_bounds.x - result.w, 0);
+        // result.y = window_bounds.y + std::min(usable_bounds.y + usable_bounds.h - window_bounds.y - result.h, 0);
+        result.x = 0;
+        result.y = 0;
+        return result;
     }
 
 } // namespace
@@ -117,11 +123,7 @@ void SdlGuard::deleter(SdlGuard*)
 
 SdlEngine::SdlEngine()
 {
-    UpdateWindowSize();
-    Resources resources(PROJECT_NAME);
-    enemy_texture_ = resources.loadTexture(surface_.Renderer(), "enemy.png");
-    shadok_texture_ = resources.loadTexture(surface_.Renderer(), "shadok.png");
-    flower_texture_ = resources.loadTexture(surface_.Renderer(), "flower.png");
+    reloadResources();
 }
 
 void SdlEngine::setConfig(const domain::Config& config)
@@ -136,9 +138,9 @@ void SdlEngine::draw(const domain::State& state)
     }
     calcLayout(state.game_status);
 
-    constexpr auto background_color = SDL_Color(0, 0, 0, 255);
-    surface_.Clear(background_color);
+    surface_.Clear(SDL_Color{50, 50, 50, 255});
 
+    drawField();
     drawEnemies(state.enemies);
     drawPlayer(state.player);
     drawFlowers(state.flowers);
@@ -199,22 +201,19 @@ SdlEngine::getCommand(const domain::State& state)
         }
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
-                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_MOVED) {
                 draw(state);
             }
             if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
-                UpdateWindowSize();
+                reloadResources();
             }
         }
     }
     return domain::QuitCommand();
 }
 
-void SdlEngine::UpdateWindowSize()
+void SdlEngine::reloadResources()
 {
-    const auto edge = GetMinimumEdgeSize(surface_.GetWindowDisplayIndex());
-    surface_.ResizeWindow(edge, edge);
-
     float hdpi, vdpi;
     SDL_GetDisplayDPI(surface_.GetWindowDisplayIndex(), nullptr, &hdpi, &vdpi);
     const Resources resources(PROJECT_NAME);
@@ -231,8 +230,13 @@ void SdlEngine::UpdateWindowSize()
     std::unique_ptr<SDL_Surface> text(
             TTF_RenderText_Solid(large_font_.get(), "Scores:", SDL_Color{255, 255, 255, 255}));
     font_size_ = text->h;
-    std::cout << "Display index " << surface_.GetWindowDisplayIndex() << " hdpi " << hdpi << " vdpi " << vdpi
-              << " font_size " << font_size_ << std::endl;
+    enemy_texture_ = resources.loadTexture(surface_.Renderer(), "enemy.png");
+    shadok_texture_ = resources.loadTexture(surface_.Renderer(), "shadok.png");
+    flower_texture_ = resources.loadTexture(surface_.Renderer(), "flower.png");
+    const auto grass_surface = resources.loadImage("grass.png");
+    grass_texture_.reset(SDL_CreateTextureFromSurface(surface_.Renderer(), grass_surface.get()));
+    grass_size_.x = grass_surface->w;
+    grass_size_.y = grass_surface->h;
 }
 
 void SdlEngine::calcLayout(const domain::GameStatus status)
@@ -240,13 +244,26 @@ void SdlEngine::calcLayout(const domain::GameStatus status)
     const auto out = surface_.OutputSize();
     const int panel_height = 1.2 * font_size_;
     status_rect_ = SDL_Rect{0, 0, out.x, panel_height};
-    field_rect_ = SDL_Rect{0, status_rect_.x + status_rect_.h, out.x, out.y - status_rect_.h};
+    field_rect_ = SDL_Rect{0, status_rect_.h, out.x, out.y - status_rect_.h};
     const int coeff = (domain::Size(field_rect_.w, field_rect_.h) / config_->field_size).minCoeff();
     field_rect_.x += (field_rect_.w - coeff * config_->field_size[0]) / 2;
     field_rect_.w = coeff * config_->field_size[0];
-    field_rect_.y += (field_rect_.h - coeff * config_->field_size[1]) / 2;
+    //field_rect_.y += (field_rect_.h - coeff * config_->field_size[1]) / 2;
     field_rect_.h = coeff * config_->field_size[1];
     cell_size_ = field_rect_.w / config_->field_size[0];
+}
+
+void SdlEngine::drawField() const
+{
+    surface_.SetViewport(&field_rect_);
+    SDL_SetTextureColorMod(grass_texture_.get(), 220, 220, 220);
+    for (int y = 0; y < field_rect_.h; y += grass_size_.y) {
+        for (int x = 0; x < field_rect_.w; x += grass_size_.x) {
+            SDL_Rect target{x, y, grass_size_.x, grass_size_.y};
+            surface_.DrawTexture(grass_texture_.get(), nullptr, &target);
+        }
+    }
+    surface_.SetViewport(nullptr);
 }
 
 std::vector<SDL_Rect> SdlEngine::getCells(const std::vector<domain::Position>& positions) const
@@ -295,8 +312,9 @@ void SdlEngine::drawFlowers(const domain::Flowers& flowers) const
     std::ranges::for_each(
             std::ranges::views::zip(rects, alphas),
             [this](const std::tuple<const SDL_Rect&, const Uint8&>& pair) {
-                SDL_SetTextureAlphaMod(flower_texture_.get(), std::get<const Uint8&>(pair));
-                surface_.DrawTexture(flower_texture_.get(), nullptr, &std::get<const SDL_Rect&>(pair));
+                const auto& [rect, coeff] = pair;
+                SDL_SetTextureColorMod(flower_texture_.get(), coeff, coeff, coeff);
+                surface_.DrawTexture(flower_texture_.get(), nullptr, &rect);
             });
 }
 

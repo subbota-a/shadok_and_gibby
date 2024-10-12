@@ -11,6 +11,8 @@ public:
     Surface();
     [[nodiscard]] int GetWindowDisplayIndex() const;
     void ResizeWindow(int width, int height) const;
+    void RepositionWindow(int x, int y) const;
+    [[nodiscard]] SDL_Rect GetWindowRect() const;
     void Clear(SDL_Color background) const;
     void Present() const;
     void DrawPolyline(const std::vector<SDL_Point>& polyline, SDL_Color color) const;
@@ -20,6 +22,7 @@ public:
     [[nodiscard]] SDL_Point OutputSize() const;
     [[nodiscard]] SDL_Point FromWindow(SDL_Point window_point) const;
     [[nodiscard]] SDL_Renderer* Renderer() const { return renderer_.get(); }
+    void SetViewport(const SDL_Rect* clip_rect) const;
 
 private:
     std::unique_ptr<SDL_Window> window_;

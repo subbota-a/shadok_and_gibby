@@ -7,12 +7,12 @@ namespace render {
 
 Surface::Surface()
     : window_(SDL_CreateWindow(
-              "Шадок и Гибби",
+              "Shadok and Gibby",
               SDL_WINDOWPOS_UNDEFINED,
               SDL_WINDOWPOS_UNDEFINED,
               900,
               900,
-              SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_MAXIMIZED))
+              SDL_WINDOW_ALLOW_HIGHDPI|SDL_WINDOW_RESIZABLE))
 {
     if (!window_) {
         throw std::runtime_error(SDL_GetError());
@@ -30,7 +30,23 @@ int Surface::GetWindowDisplayIndex() const
 
 void Surface::ResizeWindow(const int width, const int height) const
 {
-    SDL_SetWindowSize(window_.get(), width, height);
+    int top_border{0}, left_border{0}, bottom_border{0}, right_border{0};
+    SDL_GetWindowBordersSize(window_.get(), &top_border, &left_border, &bottom_border, &right_border);
+    SDL_SetWindowSize(window_.get(), width-left_border-right_border, height-top_border-bottom_border);
+}
+void Surface::RepositionWindow(int x, int y) const
+{
+    SDL_SetWindowPosition(window_.get(), x, y);
+}
+
+SDL_Rect Surface::GetWindowRect() const
+{
+    SDL_Rect result;
+    SDL_GetWindowPosition(window_.get(), &result.x, &result.y);
+    SDL_GetWindowSize(window_.get(), &result.w, &result.h);
+    int top_border{0}, left_border{0}, bottom_border{0}, right_border{0};
+    SDL_GetWindowBordersSize(window_.get(), &top_border, &left_border, &bottom_border, &right_border);
+    return result;
 }
 
 void Surface::Clear(SDL_Color background) const
@@ -81,6 +97,10 @@ SDL_Point Surface::FromWindow(SDL_Point window_point) const
             .x = static_cast<int>(std::round(x)),
             .y = static_cast<int>(std::round(y)),
     };
+}
+void Surface::SetViewport(const SDL_Rect* clip_rect) const
+{
+    SDL_RenderSetViewport(renderer_.get(), clip_rect);
 }
 
 void Surface::SetColor(SDL_Color color) const

@@ -1,5 +1,6 @@
 #include "logic/engine.h"
-
+// msvc 2022 does not implement mdspan[x,y]
+#define MDSPAN_USE_BRACKET_OPERATOR 0
 #include <experimental/mdspan>
 #include <iostream>
 #include <unordered_set>
