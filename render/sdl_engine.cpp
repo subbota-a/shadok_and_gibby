@@ -89,32 +89,26 @@ namespace {
 
 } // namespace
 
-SdlGuard::SdlGuard() : _impl(this, &SdlGuard::deleter)
-{
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        throw std::runtime_error("SDL could not initialize! SDL_Error: "s + SDL_GetError());
-    }
-    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
-        SDL_Quit();
-        throw std::runtime_error("SDL image could not initialize! IMG_Error: "s + IMG_GetError());
-    }
-    if (TTF_Init() < 0) {
-        IMG_Quit();
-        SDL_Quit();
-        throw std::runtime_error("SDL ttf could not initialize! TTF_Error: "s + TTF_GetError());
-    }
-}
-void SdlGuard::deleter(SdlGuard*)
-{
-    IMG_Quit();
-    SDL_Quit();
-}
 
 SdlEngine::SdlEngine()
 {
+    loadSounds();
     reloadResources();
 }
 
+void SdlEngine::loadSounds()
+{
+    using namespace std::string_view_literals;
+    // None,PlayerMoved,PlayerCouldNotMove,PlayerAteFlower,GameStarted,PlayerWon,PlayerLost
+    std::array<std::string_view, magic_enum::enum_count<domain::SoundEffects>()> sounds_files =
+            {""sv, "move.wav"sv, "error.wav"sv, "eat.mp3"sv, "start.mp3"sv, "win.mp3"sv, "lost.mp3"sv};
+    const Resources resources(PROJECT_NAME);
+    for (const auto index: magic_enum::enum_values<domain::SoundEffects>()) {
+        if (const auto& name = sounds_files[index]; !name.empty()) {
+            sounds_[index] = resources.loadSound(name);
+        }
+    }
+}
 void SdlEngine::setConfig(const domain::Config& config)
 {
     config_ = config;
@@ -142,6 +136,9 @@ void SdlEngine::draw(const domain::State& state)
 std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
 SdlEngine::getCommand(const domain::State& state)
 {
+    if (const auto& sound = sounds_[state.sound_effects]; sound) {
+        Mix_PlayChannel( -1, sound.get(), 0 );
+    }
     if (state.game_status == domain::GameStatus::EnemiesTurn) {
         return domain::MoveEnemiesCommand();
     }

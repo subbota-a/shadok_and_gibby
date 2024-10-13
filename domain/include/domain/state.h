@@ -20,12 +20,24 @@ struct Flowers {
 struct Enemies {
     std::vector<Position> position;
 };
-enum class GameStatus { PlayerTurn, EnemiesTurn, PlayerWon, PlayerLost };
+enum class GameStatus : uint8_t { PlayerTurn, EnemiesTurn, PlayerWon, PlayerLost };
+
+enum SoundEffects : uint8_t {
+    None,
+    PlayerMoved,
+    PlayerCouldNotMove,
+    PlayerAteFlower,
+    GameStarted,
+    PlayerWon,
+    PlayerLost
+};
+
 struct State final {
     Player player;
     Enemies enemies;
     Flowers flowers;
     GameStatus game_status;
+    SoundEffects sound_effects{None};
 };
 
-} // namespace logic
+} // namespace domain

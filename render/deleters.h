@@ -6,6 +6,8 @@ struct SDL_Renderer;
 struct SDL_Texture;
 struct SDL_Surface;
 struct _TTF_Font;
+typedef _TTF_Font TTF_Font;
+struct Mix_Chunk;
 
 template<>
 struct std::default_delete<SDL_Window> {
@@ -28,6 +30,11 @@ struct std::default_delete<SDL_Surface> {
 };
 
 template<>
-struct std::default_delete<_TTF_Font> {
-    void operator()(_TTF_Font* p) const noexcept;
+struct std::default_delete<TTF_Font> {
+    void operator()(TTF_Font* p) const noexcept;
+};
+
+template<>
+struct std::default_delete<Mix_Chunk> {
+    void operator()(Mix_Chunk* p) const noexcept;
 };

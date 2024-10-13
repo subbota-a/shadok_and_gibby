@@ -2,6 +2,7 @@
 # To keep your changes, remove these comment lines, but the plugin won't be able to modify your requirements
 
 requirements:
+  - "magic_enum/0.9.6"
   - "tomlplusplus/3.4.0"
   - "mdspan/0.6.0"
   - "eigen/3.4.0"

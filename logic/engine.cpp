@@ -34,7 +34,10 @@ internal::ObjectMap::ObjectMap(int width, int height)
 {
 }
 
-void internal::ObjectMap::clean() { std::ranges::fill(objects_bitmap_, ObjectType::Empty); }
+void internal::ObjectMap::clean()
+{
+    std::ranges::fill(objects_bitmap_, ObjectType::Empty);
+}
 
 domain::Position internal::ObjectMap::placeObject(const ObjectType object)
 {
@@ -69,9 +72,12 @@ internal::ScoreGenerator::ScoreGenerator(const unsigned min, const unsigned max)
 {
 }
 
-unsigned internal::ScoreGenerator::generate() { return score_distribution_(rng_); }
+unsigned internal::ScoreGenerator::generate()
+{
+    return score_distribution_(rng_);
+}
 
-Engine::Engine(const domain::Config &config)
+Engine::Engine(const domain::Config& config)
     : config_(config)
     , objects_map_(config_.field_size[0], config_.field_size[1])
     , score_generator_(config_.flower_scores_range.first, config_.flower_scores_range.second)
@@ -88,6 +94,7 @@ void Engine::startGame()
     state_.player.scores = 0;
     state_.player.steps = 0;
     state_.player.position = objects_map_.placeObject(ObjectType::Player);
+    state_.sound_effects = domain::SoundEffects::GameStarted;
 
     std::ranges::generate(
             state_.enemies.position,
@@ -103,37 +110,50 @@ void Engine::startGame()
     state_.game_status = domain::GameStatus::PlayerTurn;
 }
 
-void Engine::movePlayer(const domain::Direction &direction)
+void Engine::movePlayer(const domain::Direction& direction)
 {
-    const auto prev = state_.player.position;
-    state_.player.position += directions[direction];
-    state_.player.position[0] = std::clamp(state_.player.position[0], 0, config_.field_size[0] - 1);
-    state_.player.position[1] = std::clamp(state_.player.position[1], 0, config_.field_size[1] - 1);
-    if (state_.player.position == prev) {
+    state_.sound_effects = domain::SoundEffects::None;
+    auto new_pos = state_.player.position;
+    new_pos += directions[direction];
+    new_pos[0] = std::clamp(new_pos[0], 0, config_.field_size[0] - 1);
+    new_pos[1] = std::clamp(new_pos[1], 0, config_.field_size[1] - 1);
+    if (state_.player.position == new_pos) {
+        state_.sound_effects = domain::SoundEffects::PlayerCouldNotMove;
         return;
     }
 
-    switch (objects_map_.getType(state_.player.position)) {
+    switch (objects_map_.getType(new_pos)) {
     case ObjectType::Empty:
-        objects_map_.setType(prev, ObjectType::Empty);
-        objects_map_.setType(state_.player.position, ObjectType::Player);
-        state_.player.steps++;
+        movePlayerTo(new_pos);
         break;
     case ObjectType::Player:
-        std::cerr << "seconds player!\n";
-        std::terminate();
-        break;
+        throw std::logic_error("seconds player!");
     case ObjectType::Enemy:
-        state_.player.position = prev; // beep!
-        break;
+        state_.sound_effects = domain::SoundEffects::PlayerCouldNotMove;
+        return;
     case ObjectType::Flower:
-        objects_map_.setType(prev, ObjectType::Empty);
-        objects_map_.setType(state_.player.position, ObjectType::Player);
-        state_.player.steps++;
+        movePlayerTo(new_pos);
         eatFlowerByPlayer();
         break;
     }
-    state_.game_status = getNextStatus();
+    updateStatusAfterPlayerHasMoved();
+}
+
+void Engine::movePlayerTo(const domain::Position& new_pos)
+{
+    objects_map_.setType(state_.player.position, ObjectType::Empty);
+    state_.player.position = new_pos;
+    objects_map_.setType(state_.player.position, ObjectType::Player);
+    state_.player.steps++;
+    state_.sound_effects = domain::SoundEffects::PlayerMoved;
+}
+
+void Engine::eatFlowerByPlayer()
+{
+    const auto index = getFlowerIndex(state_.player.position);
+    state_.player.scores += state_.flowers.scores[index];
+    state_.sound_effects = domain::SoundEffects::PlayerAteFlower;
+    placeFlower(index);
 }
 
 void Engine::placeFlower(const ptrdiff_t index)
@@ -142,30 +162,25 @@ void Engine::placeFlower(const ptrdiff_t index)
     state_.flowers.scores[index] = score_generator_.generate();
 }
 
-ptrdiff_t Engine::getFlowerIndex(const domain::Position &pos) const
+ptrdiff_t Engine::getFlowerIndex(const domain::Position& pos) const
 {
     return std::distance(state_.flowers.positions.begin(), std::ranges::find(state_.flowers.positions, pos));
 }
 
-void Engine::eatFlowerByPlayer()
-{
-    const auto index = getFlowerIndex(state_.player.position);
-    state_.player.scores += state_.flowers.scores[index];
-    placeFlower(index);
-}
-
-domain::GameStatus Engine::getNextStatus() const
+void Engine::updateStatusAfterPlayerHasMoved()
 {
     if (state_.player.scores >= config_.min_player_scores) {
-        return domain::GameStatus::PlayerWon;
+        state_.game_status = domain::GameStatus::PlayerWon;
+        state_.sound_effects = domain::SoundEffects::PlayerWon;
+    } else if (state_.player.steps >= config_.max_player_steps) {
+        state_.game_status = domain::GameStatus::PlayerLost;
+        state_.sound_effects = domain::SoundEffects::PlayerLost;
+    } else {
+        state_.game_status = domain::GameStatus::EnemiesTurn;
     }
-    if (state_.player.steps >= config_.max_player_steps) {
-        return domain::GameStatus::PlayerLost;
-    }
-    return domain::GameStatus::EnemiesTurn;
 }
 
-void Engine::pointEnemy(const int enemy_index, const domain::Position &flower)
+void Engine::pointEnemy(const int enemy_index, const domain::Position& flower)
 {
     auto& enemy = state_.enemies.position[enemy_index];
     domain::Position vec = flower - enemy;
@@ -193,10 +208,10 @@ void Engine::pointEnemy(const int enemy_index, const domain::Position &flower)
     }
 }
 
-std::vector<int> distanceBetween(const std::vector<domain::Position> &object, const domain::Position &pos)
+std::vector<int> distanceBetween(const std::vector<domain::Position>& object, const domain::Position& pos)
 {
     std::vector<int> result(object.size());
-    std::ranges::transform(object, result.begin(), [pos](const domain::Position &p) -> int {
+    std::ranges::transform(object, result.begin(), [pos](const domain::Position& p) -> int {
         return (pos - p).array().abs().maxCoeff();
     });
     return result;
@@ -204,8 +219,6 @@ std::vector<int> distanceBetween(const std::vector<domain::Position> &object, co
 
 void Engine::moveEnemies()
 {
-    state_.game_status = domain::GameStatus::PlayerTurn;
-
     const auto distance = distanceBetween(state_.flowers.positions, state_.player.position);
     std::vector<int> flowers(config_.number_of_flowers);
     std::iota(flowers.begin(), flowers.end(), 0);
@@ -218,7 +231,7 @@ void Engine::moveEnemies()
     std::vector<int> enemies_indexes(enemies.size());
     std::iota(enemies_indexes.begin(), enemies_indexes.end(), 0);
 
-    for(unsigned i = 0; i < flowers_to_handle; i++) {
+    for (unsigned i = 0; i < flowers_to_handle; i++) {
         const auto& flower_position = state_.flowers.positions[flowers[i]];
         const auto enemies_distance = distanceBetween(enemies, flower_position);
         const auto min_enemy = std::distance(enemies_distance.begin(), std::ranges::min_element(enemies_distance));
@@ -228,6 +241,9 @@ void Engine::moveEnemies()
         enemies.erase(enemies.begin() + min_enemy);
         enemies_indexes.erase(enemies_indexes.begin() + min_enemy);
     }
+
+    state_.sound_effects = domain::SoundEffects::None;
+    state_.game_status = domain::GameStatus::PlayerTurn;
 }
 
 } // namespace logic

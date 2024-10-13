@@ -1,20 +1,14 @@
 #pragma once
 
 #include "render/engine.h"
+#include "sdl_guard.h"
 #include "surface.h"
 
 #include <memory>
 
+#include <magic_enum/magic_enum.hpp>
+
 namespace render {
-
-class SdlGuard final {
-public:
-    explicit SdlGuard();
-
-private:
-    std::unique_ptr<SdlGuard, void (*)(SdlGuard*)> _impl;
-    static void deleter(SdlGuard*);
-};
 
 class SdlEngine final : public Engine {
 public:
@@ -23,11 +17,14 @@ public:
 
     void setConfig(const domain::Config& config) override;
     void draw(const domain::State& state) override;
-    [[nodiscard]] std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
+    [[nodiscard]] std::
+            variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
             getCommand(const domain::State& state) override;
 
 private:
     SdlGuard sdl_library_;
+    std::array<std::unique_ptr<Mix_Chunk>, magic_enum::enum_count<domain::SoundEffects>()> sounds_;
+
     Surface surface_;
     std::optional<domain::Config> config_;
     std::unique_ptr<_TTF_Font> large_font_;
@@ -53,6 +50,7 @@ private:
     void drawMessage(const domain::GameStatus& state) const;
     [[nodiscard]] std::vector<SDL_Rect> getCells(const std::vector<domain::Position>& positions) const;
     void reloadResources();
+    void loadSounds();
 };
 
 } // namespace render

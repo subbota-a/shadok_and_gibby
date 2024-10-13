@@ -1,6 +1,8 @@
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+find_package(SDL2_mixer REQUIRED)
+find_package(magic_enum REQUIRED)
 
 set(_target render)
 add_library(${_target}
@@ -17,10 +19,13 @@ add_library(${_target}
     sdl_resources.h
     deleters.h
     deleters.cpp
+    sdl_guard.cpp
+    sdl_guard.h
 )
 target_link_libraries(${_target}
     PUBLIC domain paths
-    PRIVATE SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf
+    PUBLIC magic_enum::magic_enum
+    PRIVATE SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf SDL2_mixer::SDL2_mixer
 )
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     target_link_libraries(${_target}

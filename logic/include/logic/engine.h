@@ -52,9 +52,10 @@ private:
     domain::State state_;
 
     void placeFlower(ptrdiff_t index);
+    void movePlayerTo(const domain::Position& new_pos);
     void eatFlowerByPlayer();
     [[nodiscard]] ptrdiff_t getFlowerIndex(const domain::Position &pos) const;
-    [[nodiscard]] domain::GameStatus getNextStatus() const;
+    void updateStatusAfterPlayerHasMoved();
     void pointEnemy(int enemy_index, const domain::Position& flower);
 };
 
