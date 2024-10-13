@@ -10,7 +10,7 @@ namespace {
     {
         const auto displays = SDL_GetNumVideoDisplays();
         SDL_Point result{SDL_MAX_SINT16, SDL_MAX_SINT16};
-        for(int i = 0; i < displays; ++i) {
+        for (int i = 0; i < displays; ++i) {
             SDL_Rect rect;
             SDL_GetDisplayUsableBounds(i, &rect);
             result.x = std::min(result.x, rect.w);
@@ -18,7 +18,7 @@ namespace {
         }
         return result;
     }
-}
+} // namespace
 
 Surface::Surface()
     : window_(SDL_CreateWindow(
@@ -27,7 +27,7 @@ Surface::Surface()
               SDL_WINDOWPOS_UNDEFINED,
               MinDisplaySize().y * 80 / 100,
               MinDisplaySize().y * 87 / 100,
-              SDL_WINDOW_ALLOW_HIGHDPI|SDL_WINDOW_RESIZABLE))
+              SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE))
 {
     if (!window_) {
         throw std::runtime_error(SDL_GetError());
@@ -47,7 +47,7 @@ void Surface::ResizeWindow(const int width, const int height) const
 {
     int top_border{0}, left_border{0}, bottom_border{0}, right_border{0};
     SDL_GetWindowBordersSize(window_.get(), &top_border, &left_border, &bottom_border, &right_border);
-    SDL_SetWindowSize(window_.get(), width-left_border-right_border, height-top_border-bottom_border);
+    SDL_SetWindowSize(window_.get(), width - left_border - right_border, height - top_border - bottom_border);
 }
 void Surface::RepositionWindow(int x, int y) const
 {
@@ -131,4 +131,4 @@ void Surface::SetColor(SDL_Color color) const
     SDL_SetRenderDrawColor(renderer_.get(), color.r, color.g, color.b, color.a);
 }
 
-}
+} // namespace render

@@ -16,6 +16,7 @@ public:
     ~SdlEngine() override = default;
 
     void setConfig(const domain::Config& config) override;
+    void draw(double fraction, const domain::State& from_state, const domain::State& to_state) const;
     void drawTransition(const domain::State& from_state, const domain::State& to_state) override;
     [[nodiscard]] std::variant<domain::MoveCommand, domain::QuitCommand, domain::StartCommand>
     waitForPlayer(const domain::State& state) override;
@@ -40,14 +41,19 @@ private:
 
     void calcLayout();
     void drawField() const;
-    void drawEnemies(const domain::Enemies& enemies) const;
-    void drawPlayer(const domain::Player& player) const;
-    [[nodiscard]] std::vector<Uint8> getFlowersAlpha(const std::vector<unsigned>& scores) const;
-    void drawFlowers(const domain::Flowers& flowers) const;
+    void drawEnemies(double fraction, const domain::Enemies& from_enemies, const domain::Enemies& to_enemies) const;
+    void drawPlayer(const double frac, const domain::Player& from_player, const domain::Player& to_player) const;
+    [[nodiscard]] std::vector<Uint8> getFlowersColorMod(const std::vector<unsigned>& scores) const;
+    void drawFlowers(double fraction, const domain::Flowers& from_flowers, const domain::Flowers& to_flowers) const;
     static SDL_Color getStatusColor(domain::GameStatus game_status);
-    void drawStatus(const domain::State& state) const;
-    void drawMessage(const domain::GameStatus& state) const;
-    [[nodiscard]] std::vector<SDL_Rect> getCells(const std::vector<domain::Position>& positions) const;
+    void drawStatus(double frac, const domain::State& from_state, const domain::State& to_state) const;
+    void drawMessage(double frac, const domain::GameStatus& from_state, const domain::GameStatus& to_state) const;
+    [[nodiscard]] std::vector<SDL_Rect> getCells(
+            double fraction,
+            const std::vector<domain::Position>& from_positions,
+            const std::vector<domain::Position>& to_positions) const noexcept;
+    SDL_Rect getCell(double frac, const domain::Position& from_position, const domain::Position& to_position) const noexcept;
+
     void reloadResources();
     void loadSounds();
 };

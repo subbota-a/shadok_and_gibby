@@ -25,7 +25,7 @@ namespace {
         return {field.x + position[0] * edge, field.y + field.h - edge - position[1] * edge, edge, edge};
     }
 
-    int getFlowerAlpha(const int score, const int min, const int range) noexcept
+    int getFlowerColorMod(const int score, const int min, const int range) noexcept
     {
         constexpr auto min_alpha = 100;
         return static_cast<Uint8>(min_alpha + (255 - min_alpha) * (score - min) / range);
@@ -142,32 +142,13 @@ void SdlEngine::setConfig(const domain::Config& config)
     config_ = config;
 }
 
-void SdlEngine::drawTransition(const domain::State &from_state, const domain::State &to_state)
-{
-    if (!config_) {
-        throw std::logic_error("No config specified");
-    }
-    calcLayout();
-
-    surface_.Clear(SDL_Color{50, 50, 50, 255});
-
-    drawField();
-    drawEnemies(to_state.enemies);
-    drawPlayer(to_state.player);
-    drawFlowers(to_state.flowers);
-    drawStatus(to_state);
-    drawMessage(to_state.game_status);
-
-    surface_.Present();
-}
-
 std::variant<domain::MoveCommand, domain::QuitCommand, domain::StartCommand>
 SdlEngine::waitForPlayer(const domain::State& state)
 {
     assert(state.game_status != domain::GameStatus::EnemiesTurn);
 
     if (const auto& sound = sounds_[state.sound_effects]; sound) {
-        Mix_PlayChannel( -1, sound.get(), 0 );
+        Mix_PlayChannel(-1, sound.get(), 0);
     }
     SDL_Event event;
     int horizontal_movement = 0;
@@ -190,7 +171,7 @@ SdlEngine::waitForPlayer(const domain::State& state)
             case SDLK_KP_9:
                 return domain::MoveCommand{.direction = {1, 1}};
             case SDLK_KP_4:
-                return domain::MoveCommand{.direction = {-1,0}};
+                return domain::MoveCommand{.direction = {-1, 0}};
             case SDLK_KP_6:
                 return domain::MoveCommand{.direction = {1, 0}};
             case SDLK_KP_1:
@@ -223,7 +204,7 @@ SdlEngine::waitForPlayer(const domain::State& state)
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
                 event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_MOVED) {
-                drawTransition(state, state);
+                draw(1.0, state, state);
             }
             if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
                 reloadResources();
@@ -231,6 +212,49 @@ SdlEngine::waitForPlayer(const domain::State& state)
         }
     }
     return domain::QuitCommand();
+}
+
+void SdlEngine::drawTransition(const domain::State& from_state, const domain::State& to_state)
+{
+    if (!config_) {
+        throw std::logic_error("No config specified");
+    }
+    calcLayout();
+
+    SDL_DisplayMode display;
+    SDL_GetDesktopDisplayMode(surface_.GetWindowDisplayIndex(), &display);
+    constexpr auto transition_duration = std::chrono::duration<double>(0.3);
+    const auto frame_duration = transition_duration / display.refresh_rate;
+    const auto transition_start = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::time_point{};
+    for (;;) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                return;
+            }
+        }
+        now = std::chrono::steady_clock::now();
+        const auto fraction = (now - transition_start) / transition_duration;
+        if (fraction >= 1.0) {
+            break;
+        }
+        draw(fraction, from_state, to_state);
+    }
+    draw(1.0, from_state, to_state);
+}
+
+
+void SdlEngine::draw(double fraction, const domain::State& from_state, const domain::State& to_state) const
+{
+    surface_.Clear(SDL_Color{50, 50, 50, 255});
+    drawField();
+    drawEnemies(fraction, from_state.enemies, to_state.enemies);
+    drawPlayer(fraction, from_state.player, to_state.player);
+    drawFlowers(fraction, from_state.flowers, to_state.flowers);
+    drawStatus(fraction, from_state, to_state);
+    drawMessage(fraction, from_state.game_status, to_state.game_status);
+    surface_.Present();
 }
 
 void SdlEngine::calcLayout()
@@ -259,43 +283,69 @@ void SdlEngine::drawField() const
     surface_.SetViewport(nullptr);
 }
 
-std::vector<SDL_Rect> SdlEngine::getCells(const std::vector<domain::Position>& positions) const
+SDL_Rect SdlEngine::getCell(
+        const double frac, const domain::Position& from_position, const domain::Position& to_position) const noexcept
 {
-    std::vector<SDL_Rect> cells(positions.size());
-    std::ranges::transform(positions, cells.begin(), std::bind_back(&getCell, cell_size_, field_rect_));
+    return {
+            .x = field_rect_.x +
+                    static_cast<int>(
+                            std::round((from_position[0] + (to_position[0] - from_position[0]) * frac) * cell_size_)),
+            .y = field_rect_.y + field_rect_.h - cell_size_ -
+                    static_cast<int>(
+                            std::round((from_position[1] + (to_position[1] - from_position[1]) * frac) * cell_size_)),
+            .w = cell_size_,
+            .h = cell_size_,
+    };
+}
+
+std::vector<SDL_Rect> SdlEngine::getCells(
+        double fraction,
+        const std::vector<domain::Position>& from_positions,
+        const std::vector<domain::Position>& to_positions) const noexcept
+{
+    assert(from_positions.size() == to_positions.size());
+    std::vector<SDL_Rect> cells(from_positions.size());
+    std::ranges::transform(
+            from_positions,
+            to_positions,
+            cells.begin(),
+            std::bind_front(&SdlEngine::getCell, this, fraction));
     return cells;
 }
 
-std::vector<Uint8> SdlEngine::getFlowersAlpha(const std::vector<unsigned>& scores) const
+std::vector<Uint8> SdlEngine::getFlowersColorMod(const std::vector<unsigned>& scores) const
 {
     std::vector<Uint8> alpha(scores.size());
     std::ranges::transform(
             scores,
             alpha.begin(),
             std::bind_back(
-                    &getFlowerAlpha,
+                    &getFlowerColorMod,
                     config_->flower_scores_range.first,
                     config_->flower_scores_range.second - config_->flower_scores_range.first));
     return alpha;
 }
 
-void SdlEngine::drawEnemies(const domain::Enemies& enemies) const
+void SdlEngine::drawEnemies(
+        const double fraction, const domain::Enemies& from_enemies, const domain::Enemies& to_enemies) const
 {
-    for (auto& cell: getCells(enemies.position)) {
+    for (auto& cell: getCells(fraction, from_enemies.position, to_enemies.position)) {
         surface_.DrawTexture(enemy_texture_.get(), nullptr, &cell);
     }
 }
 
-void SdlEngine::drawPlayer(const domain::Player& player) const
+void SdlEngine::drawPlayer(const double frac, const domain::Player& from_player, const domain::Player& to_player) const
 {
-    const auto cell = getCell(player.position, cell_size_, field_rect_);
+    const auto cell = getCell(frac, from_player.position, to_player.position);
     surface_.DrawTexture(shadok_texture_.get(), nullptr, &cell);
 }
 
-void SdlEngine::drawFlowers(const domain::Flowers& flowers) const
+void SdlEngine::drawFlowers(
+        double fraction, const domain::Flowers& from_flowers, const domain::Flowers& to_flowers) const
 {
-    const auto rects = getCells(flowers.positions);
-    const auto alphas = getFlowersAlpha(flowers.scores);
+    const domain::Flowers& flowers = fraction < 0.5 ? from_flowers : to_flowers;
+    const auto rects = getCells(0.0, flowers.positions, flowers.positions);
+    const auto alphas = getFlowersColorMod(flowers.scores);
     std::ranges::for_each(
             std::ranges::views::zip(rects, alphas),
             [this](const std::tuple<const SDL_Rect&, const Uint8&>& pair) {
@@ -317,8 +367,9 @@ SDL_Color SdlEngine::getStatusColor(const domain::GameStatus game_status)
     }
 }
 
-void SdlEngine::drawStatus(const domain::State& state) const
+void SdlEngine::drawStatus(double frac, const domain::State& from_state, const domain::State& to_state) const
 {
+    const domain::State& state = frac < 1.0 ? from_state : to_state;
     const auto status_text = std::format("Scores: {}, steps: {}", state.player.scores, state.player.steps);
 
     getStatusColor(state.game_status);
@@ -335,8 +386,9 @@ void SdlEngine::drawStatus(const domain::State& state) const
     surface_.DrawTexture(text_texture.get(), nullptr, &text_rect);
 }
 
-void SdlEngine::drawMessage(const domain::GameStatus& state) const
+void SdlEngine::drawMessage(double frac, const domain::GameStatus& from_state, const domain::GameStatus& to_state) const
 {
+    const auto& state = frac < 1.0 ? from_state : to_state;
     std::string message;
     switch (state) {
     case domain::GameStatus::PlayerWon:
