@@ -146,47 +146,60 @@ SdlEngine::getCommand(const domain::State& state)
         return domain::MoveEnemiesCommand();
     }
     SDL_Event event;
+    int horizontal_movement = 0;
+    int vertical_movement = 0;
+
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_QUIT) {
             return domain::QuitCommand();
         }
         if (event.type == SDL_KEYDOWN) {
-            if (state.game_status == domain::GameStatus::PlayerLost ||
-                state.game_status == domain::GameStatus::PlayerWon) {
-                switch (event.key.keysym.sym) {
-                case SDLK_y:
-                    return domain::StartCommand();
-                case SDLK_n:
-                    return domain::QuitCommand();
-                }
-            } else {
-                switch (event.key.keysym.sym) {
-                case SDLK_KP_7:
-                case SDLK_w:
-                    return domain::MoveCommand{.direction = domain::Direction::UP_LEFT};
-                case SDLK_KP_8:
-                case SDLK_e:
-                    return domain::MoveCommand{.direction = domain::Direction::UP};
-                case SDLK_KP_9:
-                case SDLK_r:
-                    return domain::MoveCommand{.direction = domain::Direction::UP_RIGHT};
-                case SDLK_KP_4:
-                case SDLK_s:
-                    return domain::MoveCommand{.direction = domain::Direction::LEFT};
-                case SDLK_KP_6:
-                case SDLK_d:
-                    return domain::MoveCommand{.direction = domain::Direction::RIGHT};
-                case SDLK_KP_1:
-                case SDLK_z:
-                    return domain::MoveCommand{.direction = domain::Direction::DOWN_LEFT};
-                case SDLK_KP_2:
-                case SDLK_x:
-                    return domain::MoveCommand{.direction = domain::Direction::DOWN};
-                case SDLK_KP_3:
-                case SDLK_c:
-                    return domain::MoveCommand{.direction = domain::Direction::DOWN_RIGHT};
-                }
+            switch (event.key.keysym.sym) {
+            case SDLK_y:
+                return domain::StartCommand();
+            case SDLK_n:
+                return domain::QuitCommand();
+            case SDLK_KP_7:
+                return domain::MoveCommand{.direction = domain::Direction::UP_LEFT};
+            case SDLK_KP_8:
+                return domain::MoveCommand{.direction = domain::Direction::UP};
+            case SDLK_KP_9:
+                return domain::MoveCommand{.direction = domain::Direction::UP_RIGHT};
+            case SDLK_KP_4:
+                return domain::MoveCommand{.direction = domain::Direction::LEFT};
+            case SDLK_KP_6:
+                return domain::MoveCommand{.direction = domain::Direction::RIGHT};
+            case SDLK_KP_1:
+                return domain::MoveCommand{.direction = domain::Direction::DOWN_LEFT};
+            case SDLK_KP_2:
+                return domain::MoveCommand{.direction = domain::Direction::DOWN};
+            case SDLK_KP_3:
+                return domain::MoveCommand{.direction = domain::Direction::DOWN_RIGHT};
+            case SDLK_UP:
+                vertical_movement = 1;
+                break;
+            case SDLK_LEFT:
+                horizontal_movement = -1;
+                break;
+            case SDLK_DOWN:
+                vertical_movement = -1;
+                break;
+            case SDLK_RIGHT:
+                horizontal_movement = 1;
+                break;
+            default:
+                vertical_movement = horizontal_movement = 0;
+                break;
             }
+        }
+        if (event.type == SDL_KEYUP && state.game_status == domain::GameStatus::PlayerTurn &&
+            (horizontal_movement | vertical_movement)) {
+            std::array<domain::Direction, 9> directions = {
+                    domain::Direction::DOWN_LEFT, domain::Direction::LEFT, domain::Direction::UP_LEFT,
+                    domain::Direction::DOWN, domain::Direction::NONE, domain::Direction::UP,
+                    domain::Direction::DOWN_RIGHT, domain::Direction::RIGHT, domain::Direction::UP_RIGHT,
+            };
+            return domain::MoveCommand{.direction = directions[(horizontal_movement + 1) * 3 + vertical_movement + 1]};
         }
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||

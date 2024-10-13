@@ -1,11 +1,12 @@
 # Shadok and Gibby
+
 ![screenshot](doc/screenshot.png)
 
 The game take over from the book
 [Программирование игр и головоломок. Жак Арсак](https://coollib.in/b/181686-zhak-arsak-programmirovanie-igr-i-golovolomok/read),
 game #8.
 
-## Quote from the book 
+## Quote from the book
 
 У шадоков ситуация удовлетворительна. Испытания ракет продолжаются, постоянно кончаясь неудачами.
 
@@ -24,31 +25,34 @@ game #8.
 ## Description
 
 You are Shadok and you are int the field with flowers and Gibbies.
-You can move horizontally, vertically and diagonally on one step. 
-Your goal is to eat the flowers which bring the scores. 
-You have to score points within 100 steps. 
+You can move horizontally, vertically and diagonally on one step.
+Your goal is to eat the flowers which bring the scores.
+You have to score points within 100 steps.
 The flowers bring different amount of scores, the brighter the more.
 As soon as the flower is eaten, a new one grows at a random place.
 Gibby prevents Shadok from eating flowers.
 
 ## Keys
 
-| Direction  | Numpad key | Key |
-|------------|-----------------------------------|-----|
-| Up         | 8                                 | E   |
-| Left       | 4                                 | S   |
-| Right      | 6                                 | D   |
-| Down       | 2                                 | X   |
-| Up-Left    | 7                                 | W   |
-| Up-Right   | 9                                 | R   |
-| Down-Left  | 1                                 | Z   |
-| Down-Right | 3                                 | C   |
+| Direction  | Numpad key | Arrow Key  |
+|------------|------------|------------|
+| Up         | 8          | Up         |
+| Left       | 4          | Left       |
+| Right      | 6          | Right      |
+| Down       | 2          | Down       |
+| Up-Left    | 7          | Up+Right   |
+| Up-Right   | 9          | Up+Right   |
+| Down-Left  | 1          | Down+Left  |
+| Down-Right | 3          | Down+Right |
 
 You can move only to an empty space.
 
 ## Config file
+
 Config file `ShadokAndGibby.toml` is at:
+
 - Windows: <LOCALAPPDATA>
 - Linux: <HOME>/.config
 
-You can change the size of the field, the number of Gibbies, the number of colors, their points, the number of steps and points to win.
+You can change the size of the field, the number of Gibbies, the number of colors, their points, the number of steps and
+points to win.
