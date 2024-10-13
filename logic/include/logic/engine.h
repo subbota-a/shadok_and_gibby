@@ -41,8 +41,7 @@ class Engine {
 public:
     explicit Engine(const domain::Config &config);
     void startGame();
-    void movePlayer(const domain::Direction &direction);
-    void moveEnemies();
+    void move(const domain::Vector& direction);
     [[nodiscard]] const domain::State &getState() const { return state_; }
 
 private:
@@ -52,11 +51,13 @@ private:
     domain::State state_;
 
     void placeFlower(ptrdiff_t index);
+    void moveEnemies();
+    void movePlayer(const domain::Vector& direction);
     void movePlayerTo(const domain::Position& new_pos);
     void eatFlowerByPlayer();
     [[nodiscard]] ptrdiff_t getFlowerIndex(const domain::Position &pos) const;
     void updateStatusAfterPlayerHasMoved();
-    void pointEnemy(int enemy_index, const domain::Position& flower);
+    void forwardEnemy(int enemy_index, const domain::Position& flower);
 };
 
 } // namespace logic

@@ -16,10 +16,9 @@ public:
     ~SdlEngine() override = default;
 
     void setConfig(const domain::Config& config) override;
-    void draw(const domain::State& state) override;
-    [[nodiscard]] std::
-            variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
-            getCommand(const domain::State& state) override;
+    void drawTransition(const domain::State& from_state, const domain::State& to_state) override;
+    [[nodiscard]] std::variant<domain::MoveCommand, domain::QuitCommand, domain::StartCommand>
+    waitForPlayer(const domain::State& state) override;
 
 private:
     SdlGuard sdl_library_;
@@ -39,7 +38,7 @@ private:
     SDL_Rect field_rect_{};
     int cell_size_{};
 
-    void calcLayout(domain::GameStatus status);
+    void calcLayout();
     void drawField() const;
     void drawEnemies(const domain::Enemies& enemies) const;
     void drawPlayer(const domain::Player& player) const;

@@ -1,17 +1,15 @@
 #pragma once
 
+#include "domain/state.h"
+
 namespace domain {
 
-enum Direction { NONE, UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT };
-
 struct MoveCommand {
-    Direction direction;
+    Vector direction;
 };
 
-struct MoveEnemiesCommand{};
-
-struct QuitCommand{};
+struct QuitCommand {};
 
 struct StartCommand {};
 
-}
+} // namespace domain

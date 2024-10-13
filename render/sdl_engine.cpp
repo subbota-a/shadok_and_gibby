@@ -109,107 +109,6 @@ void SdlEngine::loadSounds()
         }
     }
 }
-void SdlEngine::setConfig(const domain::Config& config)
-{
-    config_ = config;
-}
-
-void SdlEngine::draw(const domain::State& state)
-{
-    if (!config_) {
-        throw std::logic_error("No config specified");
-    }
-    calcLayout(state.game_status);
-
-    surface_.Clear(SDL_Color{50, 50, 50, 255});
-
-    drawField();
-    drawEnemies(state.enemies);
-    drawPlayer(state.player);
-    drawFlowers(state.flowers);
-    drawStatus(state);
-    drawMessage(state.game_status);
-
-    surface_.Present();
-}
-
-std::variant<domain::MoveCommand, domain::MoveEnemiesCommand, domain::QuitCommand, domain::StartCommand>
-SdlEngine::getCommand(const domain::State& state)
-{
-    if (const auto& sound = sounds_[state.sound_effects]; sound) {
-        Mix_PlayChannel( -1, sound.get(), 0 );
-    }
-    if (state.game_status == domain::GameStatus::EnemiesTurn) {
-        return domain::MoveEnemiesCommand();
-    }
-    SDL_Event event;
-    int horizontal_movement = 0;
-    int vertical_movement = 0;
-
-    while (SDL_WaitEvent(&event)) {
-        if (event.type == SDL_QUIT) {
-            return domain::QuitCommand();
-        }
-        if (event.type == SDL_KEYDOWN) {
-            switch (event.key.keysym.sym) {
-            case SDLK_y:
-                return domain::StartCommand();
-            case SDLK_n:
-                return domain::QuitCommand();
-            case SDLK_KP_7:
-                return domain::MoveCommand{.direction = domain::Direction::UP_LEFT};
-            case SDLK_KP_8:
-                return domain::MoveCommand{.direction = domain::Direction::UP};
-            case SDLK_KP_9:
-                return domain::MoveCommand{.direction = domain::Direction::UP_RIGHT};
-            case SDLK_KP_4:
-                return domain::MoveCommand{.direction = domain::Direction::LEFT};
-            case SDLK_KP_6:
-                return domain::MoveCommand{.direction = domain::Direction::RIGHT};
-            case SDLK_KP_1:
-                return domain::MoveCommand{.direction = domain::Direction::DOWN_LEFT};
-            case SDLK_KP_2:
-                return domain::MoveCommand{.direction = domain::Direction::DOWN};
-            case SDLK_KP_3:
-                return domain::MoveCommand{.direction = domain::Direction::DOWN_RIGHT};
-            case SDLK_UP:
-                vertical_movement = 1;
-                break;
-            case SDLK_LEFT:
-                horizontal_movement = -1;
-                break;
-            case SDLK_DOWN:
-                vertical_movement = -1;
-                break;
-            case SDLK_RIGHT:
-                horizontal_movement = 1;
-                break;
-            default:
-                vertical_movement = horizontal_movement = 0;
-                break;
-            }
-        }
-        if (event.type == SDL_KEYUP && state.game_status == domain::GameStatus::PlayerTurn &&
-            (horizontal_movement | vertical_movement)) {
-            std::array<domain::Direction, 9> directions = {
-                    domain::Direction::DOWN_LEFT, domain::Direction::LEFT, domain::Direction::UP_LEFT,
-                    domain::Direction::DOWN, domain::Direction::NONE, domain::Direction::UP,
-                    domain::Direction::DOWN_RIGHT, domain::Direction::RIGHT, domain::Direction::UP_RIGHT,
-            };
-            return domain::MoveCommand{.direction = directions[(horizontal_movement + 1) * 3 + vertical_movement + 1]};
-        }
-        if (event.type == SDL_WINDOWEVENT) {
-            if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
-                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_MOVED) {
-                draw(state);
-            }
-            if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
-                reloadResources();
-            }
-        }
-    }
-    return domain::QuitCommand();
-}
 
 void SdlEngine::reloadResources()
 {
@@ -238,16 +137,111 @@ void SdlEngine::reloadResources()
     grass_size_.y = grass_surface->h;
 }
 
-void SdlEngine::calcLayout(const domain::GameStatus status)
+void SdlEngine::setConfig(const domain::Config& config)
+{
+    config_ = config;
+}
+
+void SdlEngine::drawTransition(const domain::State &from_state, const domain::State &to_state)
+{
+    if (!config_) {
+        throw std::logic_error("No config specified");
+    }
+    calcLayout();
+
+    surface_.Clear(SDL_Color{50, 50, 50, 255});
+
+    drawField();
+    drawEnemies(to_state.enemies);
+    drawPlayer(to_state.player);
+    drawFlowers(to_state.flowers);
+    drawStatus(to_state);
+    drawMessage(to_state.game_status);
+
+    surface_.Present();
+}
+
+std::variant<domain::MoveCommand, domain::QuitCommand, domain::StartCommand>
+SdlEngine::waitForPlayer(const domain::State& state)
+{
+    assert(state.game_status != domain::GameStatus::EnemiesTurn);
+
+    if (const auto& sound = sounds_[state.sound_effects]; sound) {
+        Mix_PlayChannel( -1, sound.get(), 0 );
+    }
+    SDL_Event event;
+    int horizontal_movement = 0;
+    int vertical_movement = 0;
+
+    while (SDL_WaitEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            return domain::QuitCommand();
+        }
+        if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.sym) {
+            case SDLK_y:
+                return domain::StartCommand();
+            case SDLK_n:
+                return domain::QuitCommand();
+            case SDLK_KP_7:
+                return domain::MoveCommand{.direction = {-1, 1}};
+            case SDLK_KP_8:
+                return domain::MoveCommand{.direction = {0, 1}};
+            case SDLK_KP_9:
+                return domain::MoveCommand{.direction = {1, 1}};
+            case SDLK_KP_4:
+                return domain::MoveCommand{.direction = {-1,0}};
+            case SDLK_KP_6:
+                return domain::MoveCommand{.direction = {1, 0}};
+            case SDLK_KP_1:
+                return domain::MoveCommand{.direction = {-1, -1}};
+            case SDLK_KP_2:
+                return domain::MoveCommand{.direction = {0, -1}};
+            case SDLK_KP_3:
+                return domain::MoveCommand{.direction = {1, -1}};
+            case SDLK_UP:
+                vertical_movement = 1;
+                break;
+            case SDLK_LEFT:
+                horizontal_movement = -1;
+                break;
+            case SDLK_DOWN:
+                vertical_movement = -1;
+                break;
+            case SDLK_RIGHT:
+                horizontal_movement = 1;
+                break;
+            default:
+                vertical_movement = horizontal_movement = 0;
+                break;
+            }
+        }
+        if (event.type == SDL_KEYUP && state.game_status == domain::GameStatus::PlayerTurn &&
+            (horizontal_movement | vertical_movement)) {
+            return domain::MoveCommand{.direction = {horizontal_movement, vertical_movement}};
+        }
+        if (event.type == SDL_WINDOWEVENT) {
+            if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
+                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_MOVED) {
+                drawTransition(state, state);
+            }
+            if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
+                reloadResources();
+            }
+        }
+    }
+    return domain::QuitCommand();
+}
+
+void SdlEngine::calcLayout()
 {
     const auto out = surface_.OutputSize();
     const int panel_height = 1.2 * font_size_;
     status_rect_ = SDL_Rect{0, 0, out.x, panel_height};
     field_rect_ = SDL_Rect{0, status_rect_.h, out.x, out.y - status_rect_.h};
-    const int coeff = (domain::Size(field_rect_.w, field_rect_.h) / config_->field_size).minCoeff();
+    const int coeff = (Eigen::Array2i(field_rect_.w, field_rect_.h) / config_->field_size.cast<int>()).minCoeff();
     field_rect_.x += (field_rect_.w - coeff * config_->field_size[0]) / 2;
     field_rect_.w = coeff * config_->field_size[0];
-    // field_rect_.y += (field_rect_.h - coeff * config_->field_size[1]) / 2;
     field_rect_.h = coeff * config_->field_size[1];
     cell_size_ = field_rect_.w / config_->field_size[0];
 }

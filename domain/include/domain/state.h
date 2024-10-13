@@ -7,6 +7,7 @@
 namespace domain {
 
 using Position = Eigen::Matrix<Scalar, 2, 1>;
+using Vector = Eigen::Matrix<Scalar, 2, 1>;
 
 struct Player {
     Position position;

@@ -110,13 +110,20 @@ void Engine::startGame()
     state_.game_status = domain::GameStatus::PlayerTurn;
 }
 
-void Engine::movePlayer(const domain::Direction& direction)
+void Engine::move(const domain::Vector& direction)
+{
+    movePlayer(direction);
+    if (state_.game_status == domain::GameStatus::EnemiesTurn) {
+        moveEnemies();
+    }
+}
+
+void Engine::movePlayer(const domain::Vector& direction)
 {
     state_.sound_effects = domain::SoundEffects::None;
-    auto new_pos = state_.player.position;
-    new_pos += directions[direction];
-    new_pos[0] = std::clamp(new_pos[0], 0, config_.field_size[0] - 1);
-    new_pos[1] = std::clamp(new_pos[1], 0, config_.field_size[1] - 1);
+    domain::Position new_pos = state_.player.position + direction;
+    new_pos[0] = std::clamp<domain::Scalar>(new_pos[0], 0, config_.field_size[0] - 1);
+    new_pos[1] = std::clamp<domain::Scalar>(new_pos[1], 0, config_.field_size[1] - 1);
     if (state_.player.position == new_pos) {
         state_.sound_effects = domain::SoundEffects::PlayerCouldNotMove;
         return;
@@ -156,15 +163,15 @@ void Engine::eatFlowerByPlayer()
     placeFlower(index);
 }
 
+ptrdiff_t Engine::getFlowerIndex(const domain::Position& pos) const
+{
+    return std::distance(state_.flowers.positions.begin(), std::ranges::find(state_.flowers.positions, pos));
+}
+
 void Engine::placeFlower(const ptrdiff_t index)
 {
     state_.flowers.positions[index] = objects_map_.placeObject(ObjectType::Flower);
     state_.flowers.scores[index] = score_generator_.generate();
-}
-
-ptrdiff_t Engine::getFlowerIndex(const domain::Position& pos) const
-{
-    return std::distance(state_.flowers.positions.begin(), std::ranges::find(state_.flowers.positions, pos));
 }
 
 void Engine::updateStatusAfterPlayerHasMoved()
@@ -180,41 +187,15 @@ void Engine::updateStatusAfterPlayerHasMoved()
     }
 }
 
-void Engine::pointEnemy(const int enemy_index, const domain::Position& flower)
-{
-    auto& enemy = state_.enemies.position[enemy_index];
-    domain::Position vec = flower - enemy;
-    vec[0] = std::clamp(vec[0], -1, 1);
-    vec[1] = std::clamp(vec[1], -1, 1);
-    domain::Position new_pos = enemy + vec;
-    auto place = objects_map_.getType(new_pos);
-    if (place == ObjectType::Player || place == ObjectType::Enemy) {
-        new_pos = enemy + domain::Position(0, vec[1]);
-        place = objects_map_.getType(new_pos);
-        if (place == ObjectType::Player || place == ObjectType::Enemy) {
-            new_pos = enemy + domain::Position(vec[0], 0);
-            place = objects_map_.getType(new_pos);
-        }
-        if (place == ObjectType::Player || place == ObjectType::Enemy) {
-            return; // can't move enemy
-        }
+namespace {
+    std::vector<int> distanceBetween(const std::vector<domain::Position>& object, const domain::Position& pos)
+    {
+        std::vector<int> result(object.size());
+        std::ranges::transform(object, result.begin(), [pos](const domain::Position& p) -> int {
+            return (pos - p).array().abs().maxCoeff();
+        });
+        return result;
     }
-    objects_map_.setType(enemy, ObjectType::Empty);
-    objects_map_.setType(new_pos, ObjectType::Enemy);
-    enemy = new_pos;
-    if (place == ObjectType::Flower) {
-        const auto flower_index = getFlowerIndex(new_pos);
-        placeFlower(flower_index);
-    }
-}
-
-std::vector<int> distanceBetween(const std::vector<domain::Position>& object, const domain::Position& pos)
-{
-    std::vector<int> result(object.size());
-    std::ranges::transform(object, result.begin(), [pos](const domain::Position& p) -> int {
-        return (pos - p).array().abs().maxCoeff();
-    });
-    return result;
 }
 
 void Engine::moveEnemies()
@@ -236,14 +217,41 @@ void Engine::moveEnemies()
         const auto enemies_distance = distanceBetween(enemies, flower_position);
         const auto min_enemy = std::distance(enemies_distance.begin(), std::ranges::min_element(enemies_distance));
 
-        pointEnemy(enemies_indexes[min_enemy], flower_position);
+        forwardEnemy(enemies_indexes[min_enemy], flower_position);
 
         enemies.erase(enemies.begin() + min_enemy);
         enemies_indexes.erase(enemies_indexes.begin() + min_enemy);
     }
 
-    state_.sound_effects = domain::SoundEffects::None;
     state_.game_status = domain::GameStatus::PlayerTurn;
+}
+
+void Engine::forwardEnemy(const int enemy_index, const domain::Position& flower)
+{
+    auto& enemy = state_.enemies.position[enemy_index];
+    domain::Position vec = flower - enemy;
+    vec[0] = std::clamp<domain::Scalar>(vec[0], -1, 1);
+    vec[1] = std::clamp<domain::Scalar>(vec[1], -1, 1);
+    domain::Position new_pos = enemy + vec;
+    auto place = objects_map_.getType(new_pos);
+    if (place == ObjectType::Player || place == ObjectType::Enemy) {
+        new_pos = enemy + domain::Position(0, vec[1]);
+        place = objects_map_.getType(new_pos);
+        if (place == ObjectType::Player || place == ObjectType::Enemy) {
+            new_pos = enemy + domain::Position(vec[0], 0);
+            place = objects_map_.getType(new_pos);
+        }
+        if (place == ObjectType::Player || place == ObjectType::Enemy) {
+            return; // can't move enemy
+        }
+    }
+    objects_map_.setType(enemy, ObjectType::Empty);
+    objects_map_.setType(new_pos, ObjectType::Enemy);
+    enemy = new_pos;
+    if (place == ObjectType::Flower) {
+        const auto flower_index = getFlowerIndex(new_pos);
+        placeFlower(flower_index);
+    }
 }
 
 } // namespace logic

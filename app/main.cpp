@@ -118,15 +118,16 @@ int main(int, char**)
         render->setConfig(config);
         logic::Engine logic(config);
         logic.startGame();
+        domain::State old_state = logic.getState();
 
         for (bool quit = false; !quit;) {
-            render->draw(logic.getState());
-            auto command = render->getCommand(logic.getState());
+            render->drawTransition(old_state, logic.getState());
+            auto command = render->waitForPlayer(logic.getState());
+            old_state = logic.getState();
             std::visit(
                     overloaded{
+                            [&](const domain::MoveCommand& move) { logic.move(move.direction); },
                             [&](const domain::QuitCommand&) { quit = true; },
-                            [&](const domain::MoveCommand& move) { logic.movePlayer(move.direction); },
-                            [&](const domain::MoveEnemiesCommand&) { logic.moveEnemies(); },
                             [&](const domain::StartCommand&) { logic.startGame(); }},
                     command);
         }
