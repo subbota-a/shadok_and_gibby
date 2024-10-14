@@ -17,15 +17,8 @@ class ConanApplication(ConanFile):
         tc = CMakeToolchain(self)
         tc.user_presets_path = False
         tc.generate()
-        for dep in self.dependencies.values():
-            if (len(dep.cpp_info.bindirs)>0):
-                copy(self, "*.dll", dep.cpp_info.bindirs[0], self.build_folder)
 
     def requirements(self):
         requirements = self.conan_data.get('requirements', [])
         for requirement in requirements:
             self.requires(requirement)
-        if self.settings.os == "Windows":
-            self.requires('sdl_ttf/2.22.0', options={'shared':'True'})
-            self.requires("sdl/2.28.3", options={'shared':'True'})
-            self.requires("sdl_image/2.6.3", options={'shared':'True'})

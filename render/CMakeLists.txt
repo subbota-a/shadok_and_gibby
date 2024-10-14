@@ -30,7 +30,7 @@ target_link_libraries(${_target}
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     target_link_libraries(${_target}
         PRIVATE Shcore
-        INTERFACE SDL2::SDL2main
+        INTERFACE SDL2::SDL2main SDL2::SDL2
     )
 endif()
 

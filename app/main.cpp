@@ -5,7 +5,7 @@
 #define TOML_EXCEPTIONS 0
 #include <toml++/toml.hpp>
 
-#include <SDL2/SDL_main.h>
+#include <SDL_main.h>
 
 #include <format>
 #include <iostream>

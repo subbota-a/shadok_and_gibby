@@ -1,6 +1,6 @@
 #include "render/engine.h"
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 namespace render {
 

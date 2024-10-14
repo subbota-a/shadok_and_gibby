@@ -14,9 +14,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     install(FILES README.md DESTINATION .)
     install(TARGETS shadok_and_gibby RUNTIME DESTINATION .)
     install(FILES
-        ${CMAKE_BINARY_DIR}/conan/build/${CMAKE_BUILD_TYPE}/SDL2$<$<CONFIG:Debug>:d>.dll
-        ${CMAKE_BINARY_DIR}/conan/build/${CMAKE_BUILD_TYPE}/SDL2_image$<$<CONFIG:Debug>:d>.dll
-        ${CMAKE_BINARY_DIR}/conan/build/${CMAKE_BUILD_TYPE}/SDL2_ttf.dll
+        sdl2/win/lib/x64/SDL2.dll
+        sdl2/win/lib/x64/SDL2_image.dll
+        sdl2/win/lib/x64/SDL2_mixer.dll
+        sdl2/win/lib/x64/SDL2_ttf.dll
         DESTINATION .)
 else()
     set(app_name shadok_and_gibby)

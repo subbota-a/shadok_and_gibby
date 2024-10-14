@@ -1,9 +1,9 @@
 #include "deleters.h"
 
-#include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL_video.h>
+#include <SDL_mixer.h>
+#include <SDL_render.h>
+#include <SDL_ttf.h>
+#include <SDL_video.h>
 
 void std::default_delete<SDL_Window>::operator()(SDL_Window* window) const noexcept
 {
