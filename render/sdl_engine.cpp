@@ -16,6 +16,15 @@
 
 using namespace std::string_literals;
 
+// helper type for the visitor #4
+template<class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+// explicit deduction guide (not needed as of C++20)
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 namespace render {
 
 namespace {
@@ -87,6 +96,30 @@ namespace {
         return result;
     }
 
+    double easeInOut(const double speed)
+    {
+        return speed * speed * (3.0 - 2.0 * speed);
+    }
+    double getPlayerFrac(const double frac)
+    {
+        return easeInOut(std::min(frac * 1.20, 1.0));
+    }
+
+    double getEnemyFrac(const double frac)
+    {
+        return easeInOut(std::max(frac * 1.20 - 0.2, 0.0));
+    }
+
+    SDL_Rect scaleRect(const SDL_Rect& rect, const double scale)
+    {
+        SDL_Rect result;
+        result.w = static_cast<int>(std::floor(scale * rect.w + 0.5));
+        result.h = static_cast<int>(std::floor(scale * rect.h + 0.5));
+        result.x = (rect.w - result.w) / 2 + rect.x;
+        result.y = (rect.h - result.h) / 2 + rect.y;
+        return result;
+    }
+
 } // namespace
 
 
@@ -142,28 +175,31 @@ void SdlEngine::setConfig(const domain::Config& config)
     config_ = config;
 }
 
-std::variant<domain::MoveCommand, domain::QuitCommand, domain::StartCommand>
-SdlEngine::waitForPlayer(const domain::State& state)
-{
-    assert(state.game_status != domain::GameStatus::EnemiesTurn);
-
-    if (const auto& sound = sounds_[state.sound_effects]; sound) {
-        Mix_PlayChannel(-1, sound.get(), 0);
-    }
-    SDL_Event event;
-    int horizontal_movement = 0;
-    int vertical_movement = 0;
-
-    while (SDL_WaitEvent(&event)) {
-        if (event.type == SDL_QUIT) {
-            return domain::QuitCommand();
-        }
+class GameOverEventController {
+public:
+    static std::optional<Engine::Commands> HandleEvent(const SDL_Event& event)
+    {
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
             case SDLK_y:
                 return domain::StartCommand();
             case SDLK_n:
                 return domain::QuitCommand();
+            }
+        }
+        return std::nullopt;
+    }
+};
+
+class PlayerTurnEventController {
+public:
+    std::optional<Engine::Commands> HandleEvent(const SDL_Event& event)
+    {
+        if (auto res = game_controller_.HandleEvent(event)) {
+            return res;
+        }
+        if (event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.sym) {
             case SDLK_KP_7:
                 return domain::MoveCommand{.direction = {-1, 1}};
             case SDLK_KP_8:
@@ -181,25 +217,52 @@ SdlEngine::waitForPlayer(const domain::State& state)
             case SDLK_KP_3:
                 return domain::MoveCommand{.direction = {1, -1}};
             case SDLK_UP:
-                vertical_movement = 1;
+                vertical_movement_ = 1;
                 break;
             case SDLK_LEFT:
-                horizontal_movement = -1;
+                horizontal_movement_ = -1;
                 break;
             case SDLK_DOWN:
-                vertical_movement = -1;
+                vertical_movement_ = -1;
                 break;
             case SDLK_RIGHT:
-                horizontal_movement = 1;
+                horizontal_movement_ = 1;
                 break;
             default:
-                vertical_movement = horizontal_movement = 0;
+                vertical_movement_ = horizontal_movement_ = 0;
                 break;
             }
         }
-        if (event.type == SDL_KEYUP && state.game_status == domain::GameStatus::PlayerTurn &&
-            (horizontal_movement | vertical_movement)) {
-            return domain::MoveCommand{.direction = {horizontal_movement, vertical_movement}};
+        if (event.type == SDL_KEYUP && (horizontal_movement_ | vertical_movement_)) {
+            return domain::MoveCommand{.direction = {horizontal_movement_, vertical_movement_}};
+        }
+        return std::nullopt;
+    }
+
+private:
+    GameOverEventController game_controller_;
+    int horizontal_movement_ = 0;
+    int vertical_movement_ = 0;
+};
+
+Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
+{
+    assert(state.game_status != domain::GameStatus::EnemiesTurn);
+
+    if (const auto& sound = sounds_[state.sound_effects]; sound) {
+        Mix_PlayChannel(0, sound.get(), 0);
+    }
+    SDL_Event event;
+    auto controller = [&] -> std::variant<GameOverEventController, PlayerTurnEventController> {
+        if (state.game_status == domain::GameStatus::PlayerTurn) {
+            return PlayerTurnEventController{};
+        }
+        return GameOverEventController{};
+    }();
+
+    while (SDL_WaitEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            return domain::QuitCommand();
         }
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
@@ -209,6 +272,9 @@ SdlEngine::waitForPlayer(const domain::State& state)
             if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
                 reloadResources();
             }
+        }
+        if (auto result = std::visit([&](auto& c) { return c.HandleEvent(event); }, controller)) {
+            return *result;
         }
     }
     return domain::QuitCommand();
@@ -223,7 +289,7 @@ void SdlEngine::drawTransition(const domain::State& from_state, const domain::St
 
     SDL_DisplayMode display;
     SDL_GetDesktopDisplayMode(surface_.GetWindowDisplayIndex(), &display);
-    constexpr auto transition_duration = std::chrono::duration<double>(0.3);
+    constexpr auto transition_duration = std::chrono::duration<double>(0.4);
     const auto frame_duration = transition_duration / display.refresh_rate;
     const auto transition_start = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::time_point{};
@@ -249,9 +315,9 @@ void SdlEngine::draw(double fraction, const domain::State& from_state, const dom
 {
     surface_.Clear(SDL_Color{50, 50, 50, 255});
     drawField();
+    drawFlowers(fraction, from_state.flowers, to_state.flowers);
     drawEnemies(fraction, from_state.enemies, to_state.enemies);
     drawPlayer(fraction, from_state.player, to_state.player);
-    drawFlowers(fraction, from_state.flowers, to_state.flowers);
     drawStatus(fraction, from_state, to_state);
     drawMessage(fraction, from_state.game_status, to_state.game_status);
     surface_.Present();
@@ -283,7 +349,7 @@ void SdlEngine::drawField() const
     surface_.SetViewport(nullptr);
 }
 
-SDL_Rect SdlEngine::getCell(
+SDL_Rect SdlEngine::getTransitionCell(
         const double frac, const domain::Position& from_position, const domain::Position& to_position) const noexcept
 {
     return {
@@ -298,7 +364,7 @@ SDL_Rect SdlEngine::getCell(
     };
 }
 
-std::vector<SDL_Rect> SdlEngine::getCells(
+std::vector<SDL_Rect> SdlEngine::getTransitionCells(
         double fraction,
         const std::vector<domain::Position>& from_positions,
         const std::vector<domain::Position>& to_positions) const noexcept
@@ -309,7 +375,25 @@ std::vector<SDL_Rect> SdlEngine::getCells(
             from_positions,
             to_positions,
             cells.begin(),
-            std::bind_front(&SdlEngine::getCell, this, fraction));
+            std::bind_front(&SdlEngine::getTransitionCell, this, fraction));
+    return cells;
+}
+
+SDL_Rect SdlEngine::getCell(const domain::Position& position) const noexcept
+{
+    return {
+            .x = field_rect_.x + static_cast<int>(std::floor(position[0] * cell_size_ + 0.5)),
+            .y = field_rect_.y + field_rect_.h - cell_size_ -
+                    static_cast<int>(std::floor(position[1] * cell_size_ + 0.5)),
+            .w = cell_size_,
+            .h = cell_size_,
+    };
+}
+
+std::vector<SDL_Rect> SdlEngine::getCells(const std::vector<domain::Position>& positions) const noexcept
+{
+    std::vector<SDL_Rect> cells(positions.size());
+    std::ranges::transform(positions, cells.begin(), std::bind_front(&SdlEngine::getCell, this));
     return cells;
 }
 
@@ -329,30 +413,54 @@ std::vector<Uint8> SdlEngine::getFlowersColorMod(const std::vector<unsigned>& sc
 void SdlEngine::drawEnemies(
         const double fraction, const domain::Enemies& from_enemies, const domain::Enemies& to_enemies) const
 {
-    for (auto& cell: getCells(fraction, from_enemies.position, to_enemies.position)) {
+    const auto f = getEnemyFrac(fraction);
+    for (auto& cell: getTransitionCells(f, from_enemies.position, to_enemies.position)) {
         surface_.DrawTexture(enemy_texture_.get(), nullptr, &cell);
     }
 }
 
 void SdlEngine::drawPlayer(const double frac, const domain::Player& from_player, const domain::Player& to_player) const
 {
-    const auto cell = getCell(frac, from_player.position, to_player.position);
+    const auto cell = getTransitionCell(getPlayerFrac(frac), from_player.position, to_player.position);
     surface_.DrawTexture(shadok_texture_.get(), nullptr, &cell);
 }
 
 void SdlEngine::drawFlowers(
         double fraction, const domain::Flowers& from_flowers, const domain::Flowers& to_flowers) const
 {
-    const domain::Flowers& flowers = fraction < 0.5 ? from_flowers : to_flowers;
-    const auto rects = getCells(0.0, flowers.positions, flowers.positions);
-    const auto alphas = getFlowersColorMod(flowers.scores);
-    std::ranges::for_each(
-            std::ranges::views::zip(rects, alphas),
-            [this](const std::tuple<const SDL_Rect&, const Uint8&>& pair) {
-                const auto& [rect, coeff] = pair;
-                SDL_SetTextureColorMod(flower_texture_.get(), coeff, coeff, coeff);
-                surface_.DrawTexture(flower_texture_.get(), nullptr, &rect);
-            });
+    if (fraction < 0.5) {
+        const domain::Flowers& flowers = from_flowers;
+        const auto rects = getCells(flowers.positions);
+        const auto alphas = getFlowersColorMod(flowers.scores);
+        std::ranges::for_each(
+                std::ranges::views::zip(rects, alphas),
+                [this](const std::tuple<const SDL_Rect&, const Uint8&>& pair) {
+                    const auto& [rect, coeff] = pair;
+                    SDL_SetTextureColorMod(flower_texture_.get(), coeff, coeff, coeff);
+                    surface_.DrawTexture(flower_texture_.get(), nullptr, &rect);
+                });
+    } else {
+        assert(from_flowers.positions.size() == to_flowers.positions.size());
+        assert(from_flowers.scores.size() == to_flowers.scores.size());
+        const auto from_rects = getCells(from_flowers.positions);
+        const auto to_rects = getCells(to_flowers.positions);
+        const auto from_alphas = getFlowersColorMod(from_flowers.scores);
+        const auto to_alphas = getFlowersColorMod(to_flowers.scores);
+        for (size_t i = 0; i < from_flowers.scores.size(); ++i) {
+            SDL_SetTextureColorMod(flower_texture_.get(), from_alphas[i], from_alphas[i], from_alphas[i]);
+            if (from_rects[i].x == to_rects[i].x && from_rects[i].y == to_rects[i].y) {
+                surface_.DrawTexture(flower_texture_.get(), nullptr, &from_rects[i]);
+            } else {
+                const auto scale = (fraction - 0.5) * 2;
+                const auto from_rect = scaleRect(from_rects[i], 1 - scale);
+                surface_.DrawTexture(flower_texture_.get(), nullptr, &from_rect);
+
+                SDL_SetTextureColorMod(flower_texture_.get(), to_alphas[i], to_alphas[i], to_alphas[i]);
+                const auto to_rect = scaleRect(to_rects[i], scale);
+                surface_.DrawTexture(flower_texture_.get(), nullptr, &to_rect);
+            }
+        }
+    }
 }
 
 SDL_Color SdlEngine::getStatusColor(const domain::GameStatus game_status)
