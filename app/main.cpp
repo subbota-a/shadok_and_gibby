@@ -45,8 +45,8 @@ std::filesystem::path getConfigPath()
 domain::Config getConfig(const std::filesystem::path& config_filepath)
 {
     domain::Config config{
-            .field_size = {20, 20},
-            .number_of_enemies = 4,
+            .field_size = {18, 18},
+            .number_of_enemies = 5,
             .number_of_flowers = 15,
             .flower_scores_range = {5, 10},
             .max_player_steps = 100,
