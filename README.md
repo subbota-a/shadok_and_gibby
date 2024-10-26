@@ -6,7 +6,7 @@ The game take over from the book
 [Программирование игр и головоломок. Жак Арсак](https://coollib.in/b/181686-zhak-arsak-programmirovanie-igr-i-golovolomok/read),
 game #8.
 
-## Quote from the book
+## Quote from the book (in Russian)
 
 У шадоков ситуация удовлетворительна. Испытания ракет продолжаются, постоянно кончаясь неудачами.
 
@@ -22,15 +22,22 @@ game #8.
 позволили шадоку забраться в один из их огородов, но окружили его со всех сторон, и всякий раз, когда растение
 расцветает и дает транзистор, они мчатся, чтобы собрать урожай прежде шадока.
 
-## Description
+## Description (in English)
 
-You are Shadok and you are int the field with flowers and Gibbies.
+You are Shadok and you are in the field with flowers and Gibbies.
 You can move horizontally, vertically and diagonally on one step.
 Your goal is to eat the flowers which bring the scores.
 You have to score points within 100 steps.
 The flowers bring different amount of scores, the brighter the more.
 As soon as the flower is eaten, a new one grows at a random place.
 Gibby prevents Shadok from eating flowers.
+
+## Описание (in Russian)
+Вы - Шадок и Вы на поле с цветами и Гибби. Вы можете двигаться горизонтально, вертикально и по диагонали.
+Ваша цель - съесть цветы, чтобы набрать больше 100 очков и потратить меньше 100 ходов. 
+Каждый цветок даёт очки в зависимости от его яркости - чем ярче тем больше.
+Как только цветок съеден, вырастает новый на пустом месте.
+Гибби Вам мешают собирать цветы.
 
 ## Keys
 
@@ -51,8 +58,8 @@ You can move only to an empty space.
 
 Config file `ShadokAndGibby.toml` is at:
 
-- Windows: <LOCALAPPDATA>
-- Linux: <HOME>/.config
+- Windows: %LOCALAPPDATA%
+- Linux: $HOME/.config
 
 You can change the size of the field, the number of Gibbies, the number of colors, their points, the number of steps and
 points to win.
