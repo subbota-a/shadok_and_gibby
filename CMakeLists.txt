@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.29)
-project(ShadokAndGibby)
+project(ShadokAndGibby VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -10,6 +10,13 @@ add_subdirectory(render)
 add_subdirectory(app)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    string(REPLACE "/" "\\" _setup_output_dir "${CMAKE_BINARY_DIR}")
+    string(REPLACE "/" "\\" _setup_binary_dir "${CMAKE_BINARY_DIR}")
+    string(REPLACE "/" "\\" _setup_source_dir "${CMAKE_SOURCE_DIR}")
+    configure_file(
+        "${CMAKE_SOURCE_DIR}/app/windows/setup.iss.in"
+        "${CMAKE_BINARY_DIR}/setup.iss"
+    )
     install(DIRECTORY assets DESTINATION . )
     install(FILES README.md DESTINATION .)
     install(TARGETS shadok_and_gibby RUNTIME DESTINATION .)

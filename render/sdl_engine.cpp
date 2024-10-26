@@ -253,7 +253,7 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
         Mix_PlayChannel(0, sound.get(), 0);
     }
     SDL_Event event;
-    auto controller = [&] -> std::variant<GameOverEventController, PlayerTurnEventController> {
+    auto controller = [&]() -> std::variant<GameOverEventController, PlayerTurnEventController> {
         if (state.game_status == domain::GameStatus::PlayerTurn) {
             return PlayerTurnEventController{};
         }
