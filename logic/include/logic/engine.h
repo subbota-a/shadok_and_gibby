@@ -58,6 +58,7 @@ private:
     [[nodiscard]] ptrdiff_t getFlowerIndex(const domain::Position &pos) const;
     void updateStatusAfterPlayerHasMoved();
     void forwardEnemy(int enemy_index, const domain::Position& flower);
+    domain::Position clampPosition(const domain::Position& pos) const;
 };
 
 } // namespace logic

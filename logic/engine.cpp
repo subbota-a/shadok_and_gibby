@@ -196,7 +196,7 @@ namespace {
         });
         return result;
     }
-}
+} // namespace
 
 void Engine::moveEnemies()
 {
@@ -226,19 +226,41 @@ void Engine::moveEnemies()
     state_.game_status = domain::GameStatus::PlayerTurn;
 }
 
+domain::Vector rotate45(const domain::Vector& vec)
+{
+    const auto xNew = std::clamp<domain::Scalar>(vec[0] - vec[1], -1, 1);
+    const auto yNew = std::clamp<domain::Scalar>(vec[0] + vec[1], -1, 1);
+    return domain::Vector{xNew, yNew};
+}
+
+domain::Vector rotateNeg45(const domain::Vector& vec)
+{
+    const auto xNew = std::clamp<domain::Scalar>(vec[0] + vec[1], -1, 1);
+    const auto yNew = std::clamp<domain::Scalar>(-vec[0] + vec[1], -1, 1);
+    return domain::Vector{xNew, yNew};
+}
+
+domain::Position Engine::clampPosition(const domain::Position& pos) const
+{
+    return {
+            std::clamp<domain::Scalar>(pos[0], 0, config_.field_size[0] - 1),
+            std::clamp<domain::Scalar>(pos[1], 0, config_.field_size[1] - 1),
+    };
+}
+
 void Engine::forwardEnemy(const int enemy_index, const domain::Position& flower)
 {
     auto& enemy = state_.enemies.position[enemy_index];
-    domain::Position vec = flower - enemy;
+    domain::Vector vec = flower - enemy;
     vec[0] = std::clamp<domain::Scalar>(vec[0], -1, 1);
     vec[1] = std::clamp<domain::Scalar>(vec[1], -1, 1);
     domain::Position new_pos = enemy + vec;
     auto place = objects_map_.getType(new_pos);
     if (place == ObjectType::Player || place == ObjectType::Enemy) {
-        new_pos = enemy + domain::Position(0, vec[1]);
+        new_pos = clampPosition(enemy + rotate45(vec));
         place = objects_map_.getType(new_pos);
         if (place == ObjectType::Player || place == ObjectType::Enemy) {
-            new_pos = enemy + domain::Position(vec[0], 0);
+            new_pos = clampPosition(enemy + rotateNeg45(vec));
             place = objects_map_.getType(new_pos);
         }
         if (place == ObjectType::Player || place == ObjectType::Enemy) {
