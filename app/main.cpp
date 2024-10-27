@@ -118,15 +118,16 @@ int main(int, char**)
         gui->setConfig(config);
         auto logic = std::make_unique<logic::Engine>(config);
         logic->startGame();
-        domain::State old_state = logic->getState();
 
         for (bool quit = false; !quit;) {
-            gui->drawTransition(old_state, logic->getState());
             auto command = gui->waitForPlayer(logic->getState());
-            old_state = logic->getState();
             std::visit(
                     overloaded{
-                            [&](const ui::MoveCommand& move) { logic->move(move.direction); },
+                            [&](const ui::MoveCommand& move) {
+                                const auto old_state = logic->getState();
+                                logic->move(move.direction);
+                                gui->drawTransition(old_state, logic->getState());
+                            },
                             [&](const ui::QuitCommand&) { quit = true; },
                             [&](const ui::StartCommand&) { logic->startGame(); }},
                     command);

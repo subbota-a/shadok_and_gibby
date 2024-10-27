@@ -169,16 +169,14 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
     SDL_Event event;
     auto controller = createEventController(state.game_status);
 
+    calcLayout();
+    draw(0.0, state, state);
+
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_QUIT) {
             return QuitCommand();
         }
         if (event.type == SDL_WINDOWEVENT) {
-            if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
-                event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_MOVED) {
-                calcLayout();
-                draw(1.0, state, state);
-            }
             if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
                 reloadResources();
             }
@@ -186,6 +184,8 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
         if (auto result = controller->HandleEvent(event)) {
             return *result;
         }
+        calcLayout();
+        draw(0.0, state, state);
     }
     return QuitCommand();
 }

@@ -26,7 +26,7 @@ SdlGuard::SdlGuard() : _impl(this, &SdlGuard::deleter)
         SDL_Quit();
         throw std::runtime_error("SDL ttf could not initialize! TTF_Error: "s + TTF_GetError());
     }
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+    if (Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 2048) < 0) {
         TTF_Quit();
         IMG_Quit();
         SDL_Quit();
