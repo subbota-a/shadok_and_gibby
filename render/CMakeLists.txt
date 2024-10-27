@@ -21,6 +21,8 @@ add_library(${_target}
     deleters.cpp
     sdl_guard.cpp
     sdl_guard.h
+    event_controller.cpp
+    event_controller.h
 )
 target_link_libraries(${_target}
     PUBLIC domain paths

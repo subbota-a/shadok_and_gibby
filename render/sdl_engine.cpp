@@ -1,13 +1,11 @@
 #include "sdl_engine.h"
 
+#include "event_controller.h"
 #include "resources.h"
 
 #include <SDL.h>
-#include <SDL_image.h>
 #include <SDL_ttf.h>
 
-#include <chrono>
-#include <iostream>
 #include <ranges>
 #include <thread>
 #include <vector>
@@ -16,23 +14,9 @@
 
 using namespace std::string_literals;
 
-// helper type for the visitor #4
-template<class... Ts>
-struct overloaded : Ts... {
-    using Ts::operator()...;
-};
-// explicit deduction guide (not needed as of C++20)
-template<class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 namespace render {
 
 namespace {
-
-    SDL_Rect getCell(const domain::Position& position, const int edge, const SDL_Rect& field) noexcept
-    {
-        return {field.x + position[0] * edge, field.y + field.h - edge - position[1] * edge, edge, edge};
-    }
 
     int getFlowerColorMod(const int score, const int min, const int range) noexcept
     {
@@ -40,7 +24,7 @@ namespace {
         return static_cast<Uint8>(min_alpha + (255 - min_alpha) * (score - min) / range);
     }
 
-    enum Alignement : uint8_t {
+    enum Alignment : uint8_t {
         LEFT = 0x1,
         RIGHT = 0x2,
         CENTER_HOR = LEFT | RIGHT,
@@ -175,76 +159,6 @@ void SdlEngine::setConfig(const domain::Config& config)
     config_ = config;
 }
 
-class GameOverEventController {
-public:
-    static std::optional<Engine::Commands> HandleEvent(const SDL_Event& event)
-    {
-        if (event.type == SDL_KEYDOWN) {
-            switch (event.key.keysym.sym) {
-            case SDLK_y:
-                return domain::StartCommand();
-            case SDLK_n:
-                return domain::QuitCommand();
-            }
-        }
-        return std::nullopt;
-    }
-};
-
-class PlayerTurnEventController {
-public:
-    std::optional<Engine::Commands> HandleEvent(const SDL_Event& event)
-    {
-        if (auto res = game_controller_.HandleEvent(event)) {
-            return res;
-        }
-        if (event.type == SDL_KEYDOWN) {
-            switch (event.key.keysym.sym) {
-            case SDLK_KP_7:
-                return domain::MoveCommand{.direction = {-1, 1}};
-            case SDLK_KP_8:
-                return domain::MoveCommand{.direction = {0, 1}};
-            case SDLK_KP_9:
-                return domain::MoveCommand{.direction = {1, 1}};
-            case SDLK_KP_4:
-                return domain::MoveCommand{.direction = {-1, 0}};
-            case SDLK_KP_6:
-                return domain::MoveCommand{.direction = {1, 0}};
-            case SDLK_KP_1:
-                return domain::MoveCommand{.direction = {-1, -1}};
-            case SDLK_KP_2:
-                return domain::MoveCommand{.direction = {0, -1}};
-            case SDLK_KP_3:
-                return domain::MoveCommand{.direction = {1, -1}};
-            case SDLK_UP:
-                vertical_movement_ = 1;
-                break;
-            case SDLK_LEFT:
-                horizontal_movement_ = -1;
-                break;
-            case SDLK_DOWN:
-                vertical_movement_ = -1;
-                break;
-            case SDLK_RIGHT:
-                horizontal_movement_ = 1;
-                break;
-            default:
-                vertical_movement_ = horizontal_movement_ = 0;
-                break;
-            }
-        }
-        if (event.type == SDL_KEYUP && (horizontal_movement_ | vertical_movement_)) {
-            return domain::MoveCommand{.direction = {horizontal_movement_, vertical_movement_}};
-        }
-        return std::nullopt;
-    }
-
-private:
-    GameOverEventController game_controller_;
-    int horizontal_movement_ = 0;
-    int vertical_movement_ = 0;
-};
-
 Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
 {
     assert(state.game_status != domain::GameStatus::EnemiesTurn);
@@ -253,12 +167,7 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
         Mix_PlayChannel(0, sound.get(), 0);
     }
     SDL_Event event;
-    auto controller = [&]() -> std::variant<GameOverEventController, PlayerTurnEventController> {
-        if (state.game_status == domain::GameStatus::PlayerTurn) {
-            return PlayerTurnEventController{};
-        }
-        return GameOverEventController{};
-    }();
+    auto controller = createEventController(state.game_status);
 
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_QUIT) {
@@ -267,13 +176,14 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
                 event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_MOVED) {
+                calcLayout();
                 draw(1.0, state, state);
             }
             if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
                 reloadResources();
             }
         }
-        if (auto result = std::visit([&](auto& c) { return c.HandleEvent(event); }, controller)) {
+        if (auto result = controller->HandleEvent(event)) {
             return *result;
         }
     }
@@ -488,7 +398,7 @@ void SdlEngine::drawStatus(double frac, const domain::State& from_state, const d
             text_surface->w,
             text_surface->h,
             status_rect_,
-            Alignement::LEFT | Alignement::CENTER_VER,
+            Alignment::LEFT | Alignment::CENTER_VER,
             field_rect_.x,
             0);
     surface_.DrawTexture(text_texture.get(), nullptr, &text_rect);
@@ -521,7 +431,7 @@ void SdlEngine::drawMessage(double frac, const domain::GameStatus& from_state, c
             std::max(result_text_surface->w, prompt_text_surface->w) + 4 * padding,
             result_text_surface->h + prompt_text_surface->h + 2 * padding,
             field_rect_,
-            Alignement::CENTER_HOR | Alignement::CENTER_VER,
+            Alignment::CENTER_HOR | Alignment::CENTER_VER,
             0,
             0);
     surface_.FillRect(panel_rect, SDL_Color{255, 255, 255, 80});
@@ -529,7 +439,7 @@ void SdlEngine::drawMessage(double frac, const domain::GameStatus& from_state, c
             result_text_surface->w,
             result_text_surface->h,
             panel_rect,
-            Alignement::CENTER_HOR | Alignement::TOP,
+            Alignment::CENTER_HOR | Alignment::TOP,
             2 * padding,
             padding);
     surface_.DrawTexture(result_text_texture.get(), nullptr, &result_text_rect);
@@ -537,7 +447,7 @@ void SdlEngine::drawMessage(double frac, const domain::GameStatus& from_state, c
             prompt_text_surface->w,
             prompt_text_surface->h,
             panel_rect,
-            Alignement::CENTER_HOR | Alignement::BOTTOM,
+            Alignment::CENTER_HOR | Alignment::BOTTOM,
             2 * padding,
             padding);
     surface_.DrawTexture(prompt_text_texture.get(), nullptr, &prompt_text_rect);
