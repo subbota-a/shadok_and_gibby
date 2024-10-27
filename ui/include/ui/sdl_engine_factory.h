@@ -1,8 +1,8 @@
 #pragma once
-#include "render/engine.h"
+#include "ui/engine.h"
 #include <memory>
 
-namespace render{
+namespace ui {
 
 std::unique_ptr<Engine> create_sdl_engine();
 

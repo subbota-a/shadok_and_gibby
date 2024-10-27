@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace render {
+namespace ui {
 namespace {
     SDL_Point MinDisplaySize()
     {

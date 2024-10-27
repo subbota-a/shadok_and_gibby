@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;
 
-namespace render {
+namespace ui {
 
 SdlGuard::SdlGuard() : _impl(this, &SdlGuard::deleter)
 {

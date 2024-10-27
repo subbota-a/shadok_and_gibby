@@ -9,7 +9,7 @@
 #include <format>
 #include <ranges>
 
-namespace render {
+namespace ui {
 namespace {
     const char* constCharPtr(const std::u8string& s)
     {

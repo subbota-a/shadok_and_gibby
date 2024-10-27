@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 23)
 add_subdirectory(paths)
 add_subdirectory(domain)
 add_subdirectory(logic)
-add_subdirectory(render)
+add_subdirectory(ui)
 add_subdirectory(app)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)

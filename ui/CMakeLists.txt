@@ -4,11 +4,12 @@ find_package(SDL2_ttf REQUIRED)
 find_package(SDL2_mixer REQUIRED)
 find_package(magic_enum REQUIRED)
 
-set(_target render)
+set(_target ui)
 add_library(${_target}
     engine.cpp
-    include/render/engine.h
-    include/render/sdl_engine_factory.h
+    include/ui/engine.h
+    include/ui/sdl_engine_factory.h
+    include/ui/commands.h
     sdl_engine.cpp
     sdl_engine.h
     sdl_engine_factory.cpp

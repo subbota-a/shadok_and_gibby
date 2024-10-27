@@ -19,7 +19,7 @@ target_link_libraries(${_target}
     PRIVATE
     logic
     domain
-    render
+    ui
     paths
     tomlplusplus::tomlplusplus
 )

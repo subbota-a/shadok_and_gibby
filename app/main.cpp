@@ -1,6 +1,6 @@
 #include "logic/engine.h"
 #include "paths/paths.h"
-#include "render/sdl_engine_factory.h"
+#include "ui/sdl_engine_factory.h"
 
 #define TOML_EXCEPTIONS 0
 #include <toml++/toml.hpp>
@@ -114,21 +114,21 @@ int main(int, char**)
             return 1;
         }
         saveConfig(config, getConfigPath());
-        const auto render = render::create_sdl_engine();
-        render->setConfig(config);
-        logic::Engine logic(config);
-        logic.startGame();
-        domain::State old_state = logic.getState();
+        const auto gui = ui::create_sdl_engine();
+        gui->setConfig(config);
+        auto logic = std::make_unique<logic::Engine>(config);
+        logic->startGame();
+        domain::State old_state = logic->getState();
 
         for (bool quit = false; !quit;) {
-            render->drawTransition(old_state, logic.getState());
-            auto command = render->waitForPlayer(logic.getState());
-            old_state = logic.getState();
+            gui->drawTransition(old_state, logic->getState());
+            auto command = gui->waitForPlayer(logic->getState());
+            old_state = logic->getState();
             std::visit(
                     overloaded{
-                            [&](const domain::MoveCommand& move) { logic.move(move.direction); },
-                            [&](const domain::QuitCommand&) { quit = true; },
-                            [&](const domain::StartCommand&) { logic.startGame(); }},
+                            [&](const ui::MoveCommand& move) { logic->move(move.direction); },
+                            [&](const ui::QuitCommand&) { quit = true; },
+                            [&](const ui::StartCommand&) { logic->startGame(); }},
                     command);
         }
     } catch (const std::exception& e) {

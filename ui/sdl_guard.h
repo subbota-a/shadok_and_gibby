@@ -2,7 +2,7 @@
 
 #include <memory>
 
-namespace render {
+namespace ui {
 
 class SdlGuard final {
 public:

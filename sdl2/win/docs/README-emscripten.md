@@ -198,7 +198,7 @@ for some Javascript code to steal for this approach.
 
 ## Rendering
 
-If you use SDL's 2D render API, it will use GLES2 internally, which
+If you use SDL's 2D ui API, it will use GLES2 internally, which
 Emscripten will turn into WebGL calls. You can also use OpenGL ES 2
 directly by creating a GL context and drawing into it.
 
@@ -369,6 +369,3 @@ for proper debugging, so use whatever tools work best for you.
 
 Please give us feedback on this document at [the SDL bug tracker](https://github.com/libsdl-org/SDL/issues).
 If something is wrong or unclear, we want to know!
-
-
-

@@ -5,7 +5,7 @@
 #include <SDL_video.h>
 #include <vector>
 
-namespace render {
+namespace ui {
 class Surface {
 public:
     Surface();

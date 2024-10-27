@@ -3,11 +3,11 @@
 #include <SDL_events.h>
 
 #include "domain/state.h"
-#include "render/engine.h"
+#include "ui/engine.h"
 
 #include <memory>
 
-namespace render {
+namespace ui {
 
 class EventController {
 public:

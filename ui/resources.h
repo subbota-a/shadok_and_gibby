@@ -6,7 +6,7 @@
 
 #include <filesystem>
 
-namespace render {
+namespace ui {
 
 class Resources {
 public:

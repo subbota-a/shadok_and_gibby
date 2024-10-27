@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render/engine.h"
+#include "ui/engine.h"
 #include "sdl_guard.h"
 #include "surface.h"
 
@@ -8,7 +8,7 @@
 
 #include <magic_enum/magic_enum.hpp>
 
-namespace render {
+namespace ui {
 
 class SdlEngine final : public Engine {
 public:

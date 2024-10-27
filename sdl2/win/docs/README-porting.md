@@ -39,8 +39,8 @@ There are two basic ways of building SDL at the moment:
 	src/haptic/*.c
 	src/joystick/*.c
 	src/power/*.c
-	src/render/*.c
-	src/render/software/*.c
+	src/ui/*.c
+	src/ui/software/*.c
 	src/stdlib/*.c
 	src/thread/*.c
 	src/timer/*.c
@@ -65,4 +65,3 @@ If you have any questions, don't hesitate to ask on the SDL mailing list:
 
 Enjoy!
 	Sam Lantinga				(slouken@libsdl.org)
-

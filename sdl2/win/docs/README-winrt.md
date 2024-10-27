@@ -61,7 +61,7 @@ Here is a rough list of what works, and what doesn't:
     appropriate.
   * window events
   * using Direct3D 11.x APIs outside of SDL.  Non-XAML / Direct3D-only apps can
-    choose to render content directly via Direct3D, using SDL to manage the
+    choose to ui content directly via Direct3D, using SDL to manage the
     internal WinRT window, as well as input and audio.  (Use
     SDL_GetWindowWMInfo() to get the WinRT 'CoreWindow', and pass it into
     IDXGIFactory2::CreateSwapChainForCoreWindow() as appropriate.)
@@ -515,5 +515,3 @@ According to Microsoft, "Xbox compatible controllers" should work inside
 UWP apps, potentially with more working in the future.  This includes, but
 may not be limited to, Microsoft-made Xbox controllers and USB adapters.
 (Source: https://social.msdn.microsoft.com/Forums/en-US/9064838b-e8c3-4c18-8a83-19bf0dfe150d/xinput-fails-to-detect-game-controllers?forum=wpdevelop)
-
-

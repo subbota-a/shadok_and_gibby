@@ -94,7 +94,7 @@ Apps don't work or poor video/audio performance
 
 If you get sound problems, buffer underruns, etc, run "sudo rpi-update" to
 update the RPi's firmware. Note that doing so will fix these problems, but it
-will also render the CMA - Dynamic Memory Split functionality useless.
+will also ui the CMA - Dynamic Memory Split functionality useless.
 
 Also, by default the Raspbian distro configures the GPU RAM at 64MB, this is too
 low in general, specially if a 1080p TV is hooked up.
@@ -176,5 +176,3 @@ Notes
 * When launching apps remotely (via SSH), SDL can prevent local keystrokes from
   leaking into the console only if it has root privileges. Launching apps locally
   does not suffer from this issue.
-
-

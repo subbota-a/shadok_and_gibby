@@ -14,7 +14,7 @@
 
 using namespace std::string_literals;
 
-namespace render {
+namespace ui {
 
 namespace {
 
@@ -171,7 +171,7 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
 
     while (SDL_WaitEvent(&event)) {
         if (event.type == SDL_QUIT) {
-            return domain::QuitCommand();
+            return QuitCommand();
         }
         if (event.type == SDL_WINDOWEVENT) {
             if (event.window.event == SDL_WINDOWEVENT_EXPOSED || event.window.event == SDL_WINDOWEVENT_RESIZED ||
@@ -187,7 +187,7 @@ Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
             return *result;
         }
     }
-    return domain::QuitCommand();
+    return QuitCommand();
 }
 
 void SdlEngine::drawTransition(const domain::State& from_state, const domain::State& to_state)

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "domain/state.h"
+#include "domain/units.h"
 
-namespace domain {
+namespace ui {
 
 struct MoveCommand {
-    Vector direction;
+    domain::Vector direction;
 };
 
 struct QuitCommand {};

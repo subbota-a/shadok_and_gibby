@@ -1,6 +1,6 @@
 #include "event_controller.h"
 
-namespace render {
+namespace ui {
 
 class GameOverEventController : public EventController {
 public:
@@ -11,9 +11,9 @@ public:
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
             case SDLK_y:
-                return domain::StartCommand();
+                return StartCommand();
             case SDLK_n:
-                return domain::QuitCommand();
+                return QuitCommand();
             }
         }
         return std::nullopt;
@@ -32,21 +32,21 @@ public:
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
             case SDLK_KP_7:
-                return domain::MoveCommand{.direction = {-1, 1}};
+                return MoveCommand{.direction = {-1, 1}};
             case SDLK_KP_8:
-                return domain::MoveCommand{.direction = {0, 1}};
+                return MoveCommand{.direction = {0, 1}};
             case SDLK_KP_9:
-                return domain::MoveCommand{.direction = {1, 1}};
+                return MoveCommand{.direction = {1, 1}};
             case SDLK_KP_4:
-                return domain::MoveCommand{.direction = {-1, 0}};
+                return MoveCommand{.direction = {-1, 0}};
             case SDLK_KP_6:
-                return domain::MoveCommand{.direction = {1, 0}};
+                return MoveCommand{.direction = {1, 0}};
             case SDLK_KP_1:
-                return domain::MoveCommand{.direction = {-1, -1}};
+                return MoveCommand{.direction = {-1, -1}};
             case SDLK_KP_2:
-                return domain::MoveCommand{.direction = {0, -1}};
+                return MoveCommand{.direction = {0, -1}};
             case SDLK_KP_3:
-                return domain::MoveCommand{.direction = {1, -1}};
+                return MoveCommand{.direction = {1, -1}};
             case SDLK_UP:
                 vertical_movement_ = 1;
                 break;
@@ -65,7 +65,7 @@ public:
             }
         }
         if (event.type == SDL_KEYUP && (horizontal_movement_ | vertical_movement_)) {
-            return domain::MoveCommand{.direction = {horizontal_movement_, vertical_movement_}};
+            return MoveCommand{.direction = {horizontal_movement_, vertical_movement_}};
         }
         return std::nullopt;
     }
