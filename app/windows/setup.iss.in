@@ -14,6 +14,7 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppPublisherURL=https://github.com/subbota-a/shadok_and_gibby
 DefaultDirName={autopf}\ShadokAndGibby
 DisableDirPage=yes
 ; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
@@ -34,6 +35,7 @@ SetupIconFile=${_setup_source_dir}\app\windows\app.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+SignTool=signtool /a /fd SHA256 $f
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
