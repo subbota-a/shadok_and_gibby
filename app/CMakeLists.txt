@@ -13,6 +13,8 @@ endif ()
 
 target_sources(${_target} PRIVATE
     main.cpp
+    config.cpp
+    config.h
 )
 
 target_link_libraries(${_target}

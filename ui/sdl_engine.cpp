@@ -1,7 +1,7 @@
 #include "sdl_engine.h"
 
-#include "event_controller.h"
 #include "resources.h"
+#include "ui/event_controller.h"
 
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -157,80 +157,7 @@ void SdlEngine::reloadResources()
 void SdlEngine::setConfig(const domain::Config& config)
 {
     config_ = config;
-}
-
-Engine::Commands SdlEngine::waitForPlayer(const domain::State& state)
-{
-    assert(state.game_status != domain::GameStatus::EnemiesTurn);
-
-    if (const auto& sound = sounds_[state.sound_effects]; sound) {
-        Mix_PlayChannel(0, sound.get(), 0);
-    }
-    SDL_Event event;
-    auto controller = createEventController(state.game_status);
-
     calcLayout();
-    draw(0.0, state, state);
-
-    while (SDL_WaitEvent(&event)) {
-        if (event.type == SDL_QUIT) {
-            return QuitCommand();
-        }
-        if (event.type == SDL_WINDOWEVENT) {
-            if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
-                reloadResources();
-            }
-        }
-        if (auto result = controller->HandleEvent(event)) {
-            return *result;
-        }
-        calcLayout();
-        draw(0.0, state, state);
-    }
-    return QuitCommand();
-}
-
-void SdlEngine::drawTransition(const domain::State& from_state, const domain::State& to_state)
-{
-    if (!config_) {
-        throw std::logic_error("No config specified");
-    }
-    calcLayout();
-
-    SDL_DisplayMode display;
-    SDL_GetDesktopDisplayMode(surface_.GetWindowDisplayIndex(), &display);
-    constexpr auto transition_duration = std::chrono::duration<double>(0.4);
-    const auto frame_duration = transition_duration / display.refresh_rate;
-    const auto transition_start = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::time_point{};
-    for (;;) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                return;
-            }
-        }
-        now = std::chrono::steady_clock::now();
-        const auto fraction = (now - transition_start) / transition_duration;
-        if (fraction >= 1.0) {
-            break;
-        }
-        draw(fraction, from_state, to_state);
-    }
-    draw(1.0, from_state, to_state);
-}
-
-
-void SdlEngine::draw(double fraction, const domain::State& from_state, const domain::State& to_state) const
-{
-    surface_.Clear(SDL_Color{50, 50, 50, 255});
-    drawField();
-    drawFlowers(fraction, from_state.flowers, to_state.flowers);
-    drawEnemies(fraction, from_state.enemies, to_state.enemies);
-    drawPlayer(fraction, from_state.player, to_state.player);
-    drawStatus(fraction, from_state, to_state);
-    drawMessage(fraction, from_state.game_status, to_state.game_status);
-    surface_.Present();
 }
 
 void SdlEngine::calcLayout()
@@ -451,6 +378,40 @@ void SdlEngine::drawMessage(double frac, const domain::GameStatus& from_state, c
             2 * padding,
             padding);
     surface_.DrawTexture(prompt_text_texture.get(), nullptr, &prompt_text_rect);
+}
+
+void SdlEngine::monitorChanged()
+{
+    reloadResources();
+}
+
+void SdlEngine::windowChanged()
+{
+    calcLayout();
+}
+
+void SdlEngine::drawTransition(double fraction, const domain::State& from_state, const domain::State& to_state) const
+{
+    surface_.Clear(SDL_Color{50, 50, 50, 255});
+    drawField();
+    drawFlowers(fraction, from_state.flowers, to_state.flowers);
+    drawEnemies(fraction, from_state.enemies, to_state.enemies);
+    drawPlayer(fraction, from_state.player, to_state.player);
+    drawStatus(fraction, from_state, to_state);
+    drawMessage(fraction, from_state.game_status, to_state.game_status);
+    surface_.Present();
+}
+
+void SdlEngine::draw(const domain::State& state) const
+{
+    drawTransition(0.0, state, state);
+}
+
+void SdlEngine::playSound(const domain::SoundEffects effects)
+{
+    if (const auto& sound = sounds_[effects]; sound) {
+        Mix_PlayChannel(0, sound.get(), 0);
+    }
 }
 
 } // namespace render

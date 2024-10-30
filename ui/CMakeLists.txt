@@ -23,7 +23,7 @@ add_library(${_target}
     sdl_guard.cpp
     sdl_guard.h
     event_controller.cpp
-    event_controller.h
+    include/ui/event_controller.h
 )
 target_link_libraries(${_target}
     PUBLIC domain paths

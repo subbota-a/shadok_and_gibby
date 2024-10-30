@@ -1,19 +1,21 @@
+#include "config.h"
 #include "logic/engine.h"
-#include "paths/paths.h"
+#include "ui/event_controller.h"
 #include "ui/sdl_engine_factory.h"
-
-#define TOML_EXCEPTIONS 0
-#include <toml++/toml.hpp>
 
 #include <SDL_main.h>
 
+#include <chrono>
 #include <format>
 #include <iostream>
+#include <thread>
 #include <variant>
 
 #ifdef _WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#undef min
+#undef max
 #endif
 
 // helper type for the visitor #4
@@ -38,99 +40,137 @@ void showError(const char* message)
 }
 #endif
 
-std::filesystem::path getConfigPath()
+struct AnimationState {
+    static constexpr auto transition_duration = std::chrono::duration<double>(0.4);
+    std::chrono::steady_clock::time_point transition_start = std::chrono::steady_clock::now();
+    domain::State from_state;
+    std::unique_ptr<ui::EventController> event_controller;
+    [[nodiscard]] double getFraction(const std::chrono::steady_clock::time_point now) const
+    {
+        return (now - transition_start) / transition_duration;
+    }
+};
+
+struct PlayerTurnState {
+    std::unique_ptr<ui::EventController> event_controller;
+};
+
+struct MenuState {
+    std::unique_ptr<ui::EventController> event_controller;
+};
+
+using AppState = std::variant<MenuState, PlayerTurnState, AnimationState>;
+
+domain::Config getConfig()
 {
-    return paths::getAppConfigPath() / PROJECT_NAME ".toml";
-}
-domain::Config getConfig(const std::filesystem::path& config_filepath)
-{
-    domain::Config config{
-            .field_size = {18, 18},
-            .number_of_enemies = 5,
-            .number_of_flowers = 15,
-            .flower_scores_range = {5, 10},
-            .max_player_steps = 100,
-            .min_player_scores = 100,
-    };
-    if (exists(config_filepath)) {
-        toml::parse_result result = toml::parse_file(config_filepath.c_str());
-        if (!result) {
-            showError(std::format(
-                              "Configuration file '{}' parsing failed: {}",
-                              config_filepath.string(),
-                              result.error().description())
-                              .c_str());
+    if (exists(getConfigPath())) {
+        if (auto res = loadConfig(getConfigPath())) {
+            if (auto val = validateConfig(*res)) {
+                return *res;
+            } else {
+                showError(val.error().c_str());
+            }
         } else {
-            auto& table = result.table();
-            config.field_size[0] = table["field_width"].value_or(config.field_size[0]);
-            config.field_size[1] = table["field_height"].value_or(config.field_size[1]);
-            config.number_of_enemies = table["number_of_enemies"].value_or(config.number_of_enemies);
-            config.number_of_flowers = table["number_of_flowers"].value_or(config.number_of_flowers);
-            config.flower_scores_range.first = table["flower_scores_min"].value_or(config.flower_scores_range.first);
-            config.flower_scores_range.second = table["flower_scores_max"].value_or(config.flower_scores_range.second);
-            config.max_player_steps = table["max_player_steps"].value_or(config.max_player_steps);
-            config.min_player_scores = table["min_player_scores"].value_or(config.min_player_scores);
+            showError(res.error().c_str());
         }
+    }
+    auto config = getDefaultConfig();
+    if (auto save = saveConfig(config, getConfigPath()); !save) {
+        showError(save.error().c_str());
     }
     return config;
 }
 
-bool validateConfig(const domain::Config& config)
+std::optional<ui::Commands> nextCommand(ui::EventController& controller, ui::Engine& gui)
 {
-    if (config.flower_scores_range.first >= config.flower_scores_range.second) {
-        showError("Invalid flowers scores range, flower_scores_min < flower_scores_max expected.");
-        return false;
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            return ui::QuitCommand();
+        }
+        if (event.type == SDL_WINDOWEVENT) {
+            if (event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
+                gui.monitorChanged();
+            }
+            gui.windowChanged();
+        }
+        if (auto result = controller.HandleEvent(event)) {
+            return *result;
+        }
     }
-    return true;
+    return std::nullopt;
 }
 
-void saveConfig(const domain::Config& config, const std::filesystem::path& path)
+ui::EventController& getEventController(AppState& state)
 {
-    auto tbl = toml::table{
-            {"field_width", config.field_size[0]},
-            {"field_height", config.field_size[1]},
-            {"number_of_enemies", config.number_of_enemies},
-            {"number_of_flowers", config.number_of_flowers},
-            {"flower_scores_min", config.flower_scores_range.first},
-            {"flower_scores_max", config.flower_scores_range.second},
-            {"max_player_steps", config.max_player_steps},
-            {"min_player_scores", config.min_player_scores},
-    };
-    std::ofstream out;
-    out.open(path, std::ios::out);
-    if (!out) {
-        showError(std::format("Failed to create config file '{}'", path.string()).c_str());
-    } else {
-        out << "# Shadok and Gibby config\n\n";
-        out << tbl << std::endl;
-    }
+    return *std::visit([](auto& s) { return s.event_controller.get(); }, state);
 }
 
 int main(int, char**)
 {
     try {
-        const auto config = getConfig(getConfigPath());
-        if (!validateConfig(config)) {
-            return 1;
-        }
-        saveConfig(config, getConfigPath());
+        const auto config = getConfig();
         const auto gui = ui::create_sdl_engine();
         gui->setConfig(config);
         auto logic = std::make_unique<logic::Engine>(config);
         logic->startGame();
+        gui->playSound(logic->getState().sound_effects);
+        AppState app_state = PlayerTurnState{
+            .event_controller = ui::createEventController(logic->getState().game_status),
+        };
 
         for (bool quit = false; !quit;) {
-            auto command = gui->waitForPlayer(logic->getState());
-            std::visit(
+            auto command = nextCommand(getEventController(app_state), *gui);
+            if (command) {
+                std::visit(
                     overloaded{
-                            [&](const ui::MoveCommand& move) {
-                                const auto old_state = logic->getState();
-                                logic->move(move.direction);
-                                gui->drawTransition(old_state, logic->getState());
-                            },
-                            [&](const ui::QuitCommand&) { quit = true; },
-                            [&](const ui::StartCommand&) { logic->startGame(); }},
-                    command);
+                        [&](const ui::MoveCommand& move) {
+                            const auto old_state = logic->getState();
+                            logic->move(move.direction);
+                            gui->playSound(logic->getState().sound_effects);
+                            app_state = AnimationState{
+                                .from_state = old_state,
+                                .event_controller = ui::createEventController(logic->getState().game_status),
+                            };
+                        },
+                        [&](const ui::QuitCommand&) { quit = true; },
+                        [&](const ui::StartCommand&) {
+                            logic->startGame();
+                            gui->playSound(logic->getState().sound_effects);
+                            app_state = PlayerTurnState{
+                                .event_controller = ui::createEventController(logic->getState().game_status),
+                            };
+                        },
+                    },
+                    *command);
+            }
+            std::visit(
+                overloaded{
+                    [&](const AnimationState& animationState) {
+                        const auto fraction =
+                            std::min(animationState.getFraction(std::chrono::steady_clock::now()), 1.0);
+                        gui->drawTransition(fraction, animationState.from_state, logic->getState());
+                        if (fraction == 1.0) {
+                            if (logic->getState().game_status == domain::GameStatus::PlayerTurn) {
+                                app_state = PlayerTurnState{
+                                    .event_controller = ui::createEventController(logic->getState().game_status),
+                                };
+                            } else {
+                                app_state = MenuState{
+                                    .event_controller = ui::createEventController(logic->getState().game_status),
+                                };
+                            }
+                        }
+                    },
+                    [&](const PlayerTurnState&) {
+                        gui->draw(logic->getState());
+                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    },
+                    [&](const MenuState&) {
+                        gui->draw(logic->getState());
+                        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    }},
+                app_state);
         }
     } catch (const std::exception& e) {
         showError(e.what());

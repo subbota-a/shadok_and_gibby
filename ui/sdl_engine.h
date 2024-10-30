@@ -16,9 +16,11 @@ public:
     ~SdlEngine() override = default;
 
     void setConfig(const domain::Config& config) override;
-    void draw(double fraction, const domain::State& from_state, const domain::State& to_state) const;
-    void drawTransition(const domain::State& from_state, const domain::State& to_state) override;
-    [[nodiscard]] Commands waitForPlayer(const domain::State& state) override;
+    void monitorChanged() override;
+    void windowChanged() override;
+    void drawTransition(double fraction, const domain::State& from_state, const domain::State& to_state) const override;
+    void draw(const domain::State& state) const override;
+    void playSound(domain::SoundEffects effects) override;
 
 private:
     SdlGuard sdl_library_;

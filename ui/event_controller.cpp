@@ -1,4 +1,4 @@
-#include "event_controller.h"
+#include "ui/event_controller.h"
 
 namespace ui {
 
@@ -6,7 +6,7 @@ class GameOverEventController : public EventController {
 public:
     ~GameOverEventController() override = default;
 
-    std::optional<Engine::Commands> HandleEvent(const SDL_Event& event) override
+    std::optional<Commands> HandleEvent(const SDL_Event& event) override
     {
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
@@ -24,7 +24,7 @@ class PlayerTurnEventController : public EventController {
 public:
     ~PlayerTurnEventController() override = default;
 
-    std::optional<Engine::Commands> HandleEvent(const SDL_Event& event) override
+    std::optional<Commands> HandleEvent(const SDL_Event& event) override
     {
         if (auto res = game_controller_.HandleEvent(event)) {
             return res;

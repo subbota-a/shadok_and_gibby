@@ -34,7 +34,7 @@ BreakConstructorInitializers: BeforeComma
 BinPackArguments: false
 BinPackParameters: false
 ColumnLimit: 120
-ContinuationIndentWidth: 8
+ContinuationIndentWidth: 4
 IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
