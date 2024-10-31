@@ -40,24 +40,25 @@ void showError(const char* message)
 }
 #endif
 
-struct AnimationState {
-    static constexpr auto transition_duration = std::chrono::duration<double>(0.4);
-    std::chrono::steady_clock::time_point transition_start = std::chrono::steady_clock::now();
-    domain::State from_state;
+struct VisualState {
+    domain::GameStatus game_status;
     std::unique_ptr<ui::EventController> event_controller;
+};
+
+struct AnimationState : VisualState {
+    static constexpr auto transition_duration = std::chrono::duration<double>(0.4);
+    domain::State from_state;
+    std::chrono::steady_clock::time_point transition_start = std::chrono::steady_clock::now();
+
     [[nodiscard]] double getFraction(const std::chrono::steady_clock::time_point now) const
     {
         return (now - transition_start) / transition_duration;
     }
 };
 
-struct PlayerTurnState {
-    std::unique_ptr<ui::EventController> event_controller;
-};
+struct PlayerTurnState : VisualState {};
 
-struct MenuState {
-    std::unique_ptr<ui::EventController> event_controller;
-};
+struct MenuState : VisualState {};
 
 using AppState = std::variant<MenuState, PlayerTurnState, AnimationState>;
 
@@ -106,6 +107,18 @@ ui::EventController& getEventController(AppState& state)
     return *std::visit([](auto& s) { return s.event_controller.get(); }, state);
 }
 
+VisualState createOrGetEventController(AppState& state, domain::GameStatus status)
+{
+    auto& visual_state = std::visit([](auto& s) -> VisualState& { return s; }, state);
+    if (visual_state.game_status == status) {
+        return std::move(visual_state);
+    }
+    return {
+        .game_status = status,
+        .event_controller = ui::createEventController(status),
+    };
+}
+
 int main(int, char**)
 {
     try {
@@ -115,9 +128,10 @@ int main(int, char**)
         auto logic = std::make_unique<logic::Engine>(config);
         logic->startGame();
         gui->playSound(logic->getState().sound_effects);
-        AppState app_state = PlayerTurnState{
+        AppState app_state = PlayerTurnState{{
+            .game_status = logic->getState().game_status,
             .event_controller = ui::createEventController(logic->getState().game_status),
-        };
+        }};
 
         for (bool quit = false; !quit;) {
             auto command = nextCommand(getEventController(app_state), *gui);
@@ -129,17 +143,17 @@ int main(int, char**)
                             logic->move(move.direction);
                             gui->playSound(logic->getState().sound_effects);
                             app_state = AnimationState{
-                                .from_state = old_state,
-                                .event_controller = ui::createEventController(logic->getState().game_status),
-                            };
+                                {createOrGetEventController(app_state, logic->getState().game_status)},
+                                old_state};
                         },
                         [&](const ui::QuitCommand&) { quit = true; },
                         [&](const ui::StartCommand&) {
                             logic->startGame();
                             gui->playSound(logic->getState().sound_effects);
-                            app_state = PlayerTurnState{
+                            app_state = PlayerTurnState{{
+                                .game_status = logic->getState().game_status,
                                 .event_controller = ui::createEventController(logic->getState().game_status),
-                            };
+                            }};
                         },
                     },
                     *command);
@@ -153,12 +167,10 @@ int main(int, char**)
                         if (fraction == 1.0) {
                             if (logic->getState().game_status == domain::GameStatus::PlayerTurn) {
                                 app_state = PlayerTurnState{
-                                    .event_controller = ui::createEventController(logic->getState().game_status),
-                                };
+                                    {createOrGetEventController(app_state, logic->getState().game_status)}};
                             } else {
-                                app_state = MenuState{
-                                    .event_controller = ui::createEventController(logic->getState().game_status),
-                                };
+                                app_state =
+                                    MenuState{{createOrGetEventController(app_state, logic->getState().game_status)}};
                             }
                         }
                     },
