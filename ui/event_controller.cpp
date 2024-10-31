@@ -37,16 +37,44 @@ public:
             *this = dir;
         }
     }
-
-    [[nodiscard]] bool match(Direction dir) const {
-        return dir == Zero || dir == *this;
+    void unapply(Direction dir)
+    {
+        if (dir != Zero) {
+            *this = Zero;
+        }
     }
+
+    [[nodiscard]] bool match(Direction dir) const { return dir == Zero || dir == *this; }
 
     [[nodiscard]] int toInt() const noexcept { return d_; }
 
 private:
     int d_;
     constexpr explicit Direction(int direction) : d_{direction} {}
+};
+
+class Direction2D {
+public:
+    explicit Direction2D() = default;
+    Direction2D(Direction horizontal, Direction vertical) : directions_({horizontal, vertical}) {}
+    void apply(const Direction2D& d)
+    {
+        directions_[0].apply(d.directions_[0]);
+        directions_[1].apply(d.directions_[1]);
+    }
+    void unapply(const Direction2D& d)
+    {
+        directions_[0].unapply(d.directions_[0]);
+        directions_[1].unapply(d.directions_[1]);
+    }
+    [[nodiscard]] bool match(const Direction2D& d) const
+    {
+        return directions_[0].match(d.directions_[0]) && directions_[1].match(d.directions_[1]);
+    }
+    [[nodiscard]] domain::Vector toVector() const { return {directions_[0].toInt(), directions_[1].toInt()}; }
+
+private:
+    std::array<Direction, 2> directions_ = {Direction::Zero, Direction::Zero};
 };
 
 const Direction Direction::Negative{-1};
@@ -72,24 +100,23 @@ public:
     }
 
 private:
-    static std::unordered_map<SDL_Keycode, std::array<Direction, 2>> codes;
+    static std::unordered_map<SDL_Keycode, Direction2D> codes;
     GameOverEventController game_controller_;
-    std::array<Direction, 2> directions_;
+    Direction2D directions_;
     int strokes_length = 0;
     int pressed_count = 0;
 
     void clear()
     {
-        directions_.fill(Direction::Zero);
+        directions_ = Direction2D{};
         strokes_length = 0;
         pressed_count = 0;
     }
 
     void registerKeyDown(SDL_Keycode keyCode)
     {
-        if (const auto it = codes.find(keyCode); it != codes.end()){
-            directions_[0].apply(it->second[0]);
-            directions_[1].apply(it->second[1]);
+        if (const auto it = codes.find(keyCode); it != codes.end()) {
+            directions_.apply(it->second);
             ++pressed_count;
             strokes_length = std::max(strokes_length, pressed_count);
         }
@@ -97,15 +124,15 @@ private:
     std::optional<Commands> handleKeyRelease(SDL_Keycode keyCode)
     {
         std::optional<Commands> result;
-        if (const auto it = codes.find(keyCode); it != codes.end() && pressed_count > 0)
-        {
-            if (!directions_[0].match(it->second[0]) || !directions_[1].match(it->second[1])){
+        if (const auto it = codes.find(keyCode); it != codes.end() && pressed_count > 0) {
+            if (!directions_.match(it->second)) {
                 --strokes_length;
-            } else if (pressed_count == strokes_length){
-                result = MoveCommand({directions_[0].toInt(), directions_[1].toInt()});
+            } else if (pressed_count == strokes_length) {
+                result = MoveCommand(directions_.toVector());
+                directions_.unapply(it->second);
             }
             --pressed_count;
-            if (pressed_count == 0){
+            if (pressed_count == 0) {
                 clear();
             }
         }
@@ -113,7 +140,7 @@ private:
     }
 };
 
-std::unordered_map<SDL_Keycode, std::array<Direction, 2>> PlayerTurnEventController::codes = {
+std::unordered_map<SDL_Keycode, Direction2D> PlayerTurnEventController::codes = {
     {SDLK_KP_7, {Direction::Negative, Direction::Positive}},
     {SDLK_KP_8, {Direction::Zero, Direction::Positive}},
     {SDLK_KP_9, {Direction::Positive, Direction::Positive}},

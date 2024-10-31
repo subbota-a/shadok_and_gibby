@@ -10,22 +10,6 @@ namespace logic {
 using ObjectType = internal::ObjectMap::ObjectType;
 using std::experimental::mdspan;
 
-namespace {
-    // according to Direction
-    // NONE, UP, DOWN, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT
-    std::array<domain::Position, 9> directions = {{
-            {0, 0}, // NONE
-            {0, 1}, // UP
-            {0, -1}, // DOWN
-            {-1, 0}, // LEFT
-            {1, 0}, // RIGHT
-            {-1, 1}, // UP_LEFT
-            {1, 1}, // UP_RIGHT
-            {-1, -1}, // DOWN_LEFT
-            {1, -1}, // DOWN_RIGHT
-    }};
-} // namespace
-
 internal::ObjectMap::ObjectMap(int width, int height)
     : width_(width)
     , height_(height)
@@ -97,15 +81,15 @@ void Engine::startGame()
     state_.sound_effects = domain::SoundEffects::GameStarted;
 
     std::ranges::generate(
-            state_.enemies.position,
-            std::bind_front(&internal::ObjectMap::placeObject, &objects_map_, ObjectType::Enemy));
+        state_.enemies.position,
+        std::bind_front(&internal::ObjectMap::placeObject, &objects_map_, ObjectType::Enemy));
 
     std::ranges::generate(
-            state_.flowers.positions,
-            std::bind_front(&internal::ObjectMap::placeObject, &objects_map_, ObjectType::Flower));
+        state_.flowers.positions,
+        std::bind_front(&internal::ObjectMap::placeObject, &objects_map_, ObjectType::Flower));
     std::ranges::generate(
-            state_.flowers.scores,
-            std::bind_front(&internal::ScoreGenerator::generate, &score_generator_));
+        state_.flowers.scores,
+        std::bind_front(&internal::ScoreGenerator::generate, &score_generator_));
 
     state_.game_status = domain::GameStatus::PlayerTurn;
 }
@@ -122,9 +106,8 @@ void Engine::movePlayer(const domain::Vector& direction)
 {
     state_.sound_effects = domain::SoundEffects::None;
     domain::Position new_pos = state_.player.position + direction;
-    new_pos[0] = std::clamp<domain::Scalar>(new_pos[0], 0, config_.field_size[0] - 1);
-    new_pos[1] = std::clamp<domain::Scalar>(new_pos[1], 0, config_.field_size[1] - 1);
-    if (state_.player.position == new_pos) {
+    if (new_pos[0] < 0 || new_pos[0] >= config_.field_size[0] || new_pos[1] < 0 ||
+        new_pos[1] >= config_.field_size[1]) {
         state_.sound_effects = domain::SoundEffects::PlayerCouldNotMove;
         return;
     }
@@ -243,8 +226,8 @@ domain::Vector rotateNeg45(const domain::Vector& vec)
 domain::Position Engine::clampPosition(const domain::Position& pos) const
 {
     return {
-            std::clamp<domain::Scalar>(pos[0], 0, config_.field_size[0] - 1),
-            std::clamp<domain::Scalar>(pos[1], 0, config_.field_size[1] - 1),
+        std::clamp<domain::Scalar>(pos[0], 0, config_.field_size[0] - 1),
+        std::clamp<domain::Scalar>(pos[1], 0, config_.field_size[1] - 1),
     };
 }
 

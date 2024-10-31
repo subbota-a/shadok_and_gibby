@@ -46,7 +46,7 @@ struct VisualState {
 };
 
 struct AnimationState : VisualState {
-    static constexpr auto transition_duration = std::chrono::duration<double>(0.4);
+    static constexpr auto transition_duration = std::chrono::duration<double>(0.3);
     domain::State from_state;
     std::chrono::steady_clock::time_point transition_start = std::chrono::steady_clock::now();
 
