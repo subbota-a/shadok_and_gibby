@@ -1,8 +1,8 @@
 #!/usr/bin/env xdg-open
 [Desktop Entry]
 Name=Shadok and Gibby
-Exec=${CMAKE_INSTALL_PREFIX}/bin/${app_name}
-Icon=${CMAKE_INSTALL_PREFIX}/share/${CMAKE_PROJECT_NAME}/assets/shadok.png
+Exec=${app_name}
+Icon=${app_name}
 Terminal=false
 Type=Application
 Categories=Game;

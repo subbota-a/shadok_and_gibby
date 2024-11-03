@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.29)
+cmake_minimum_required(VERSION 3.25)
 project(ShadokAndGibby VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -35,5 +35,6 @@ else()
     )
     install(TARGETS shadok_and_gibby RUNTIME DESTINATION bin)
     install(DIRECTORY assets DESTINATION share/${CMAKE_PROJECT_NAME} )
+    install(DIRECTORY app/linux/icons DESTINATION share )
     install(PROGRAMS ${_desktop_file} DESTINATION share/applications )
 endif ()

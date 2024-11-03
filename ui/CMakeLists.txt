@@ -29,12 +29,10 @@ target_link_libraries(${_target}
     PUBLIC domain paths
     PUBLIC magic_enum::magic_enum
     PRIVATE SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf SDL2_mixer::SDL2_mixer
-    INTERFACE SDL2::SDL2main
 )
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     target_link_libraries(${_target}
         PRIVATE Shcore
-        INTERFACE SDL2::SDL2
     )
 endif()
 

@@ -1,4 +1,5 @@
 find_package(tomlplusplus REQUIRED)
+find_package(SDL2 REQUIRED)
 
 set(_target shadok_and_gibby)
 
@@ -24,5 +25,7 @@ target_link_libraries(${_target}
     ui
     paths
     tomlplusplus::tomlplusplus
+    SDL2::SDL2main
+    SDL2::SDL2
 )
 target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")
