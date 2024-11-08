@@ -2,6 +2,7 @@
 #if defined(linux)
 #include <climits>
 #include <unistd.h>
+
 namespace paths {
 std::filesystem::path getAppDataPath()
 {
@@ -13,10 +14,15 @@ std::filesystem::path getAppDataPath()
     }
     return std::filesystem::path(std::string_view(result, len)).parent_path().parent_path() / "share";
 }
+
 std::filesystem::path getAppConfigPath()
 {
-    return std::filesystem::path(std::getenv("HOME")) / ".config";
+    const auto* xdg_config_home = std::getenv("XDG_CONFIG_HOME");
+    return xdg_config_home != nullptr && *xdg_config_home != '\0'
+        ? std::filesystem::path(xdg_config_home)
+        : (std::filesystem::path(std::getenv("HOME")) / ".config");
 }
+
 } // namespace paths
 #endif
 

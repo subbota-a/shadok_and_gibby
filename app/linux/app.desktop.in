@@ -5,4 +5,4 @@ Exec=${app_name}
 Icon=${app_name}
 Terminal=false
 Type=Application
-Categories=Game;
+Categories=Game;StrategyGame

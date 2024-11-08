@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+    <id>io.github.subbota_a.ShadokAndGibby</id>
+
+    <name>Shadok and Gibby</name>
+    <summary>2D  turn-based strategy game with puzzle elements</summary>
+    <icon type="remote">https://raw.githubusercontent.com/subbota-a/shadok_and_gibby/refs/heads/AppImage/app/linux/icons/hicolor/scalable/apps/shadok_and_gibby.svg</icon>
+    <url type="homepage">https://github.com/subbota-a/shadok_and_gibby</url>
+    <categories>
+        <category>Game</category>
+        <category>StrategyGame</category>
+    </categories>
+    <developer id="subbota-a@github.com"><name>Alexey Subbota</name></developer>
+    <content_rating type="oars-1.0" />
+    <metadata_license>FTL</metadata_license>
+    <project_license>GPL-3.0-or-later</project_license>
+
+    <recommends>
+        <display_length compare="ge">400</display_length>
+    </recommends>
+
+    <description>
+        <p>
+            In &quot;Shadok and Gibby&quot;, you play as Shadok in a field filled with flowers and Gibbies.
+            Your goal is to collect flowers, each offering points based on their brightness.
+            The challenge lies in gathering enough points within 100 moves while avoiding the Gibbies,
+            who aim to hinder your progress. As flowers are consumed, new ones sprout randomly across the field,
+            offering a fresh opportunity to score but also increasing the strategic complexity.
+        </p>
+    </description>
+
+    <launchable type="desktop-id">shadok_and_gibby.desktop</launchable>
+</component>
