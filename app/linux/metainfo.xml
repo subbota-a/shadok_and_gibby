@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-    <id>io.github.subbota_a.ShadokAndGibby</id>
+    <id>${APP_ID}</id>
 
     <name>Shadok and Gibby</name>
     <summary>2D  turn-based strategy game with puzzle elements</summary>
@@ -29,5 +29,5 @@
         </p>
     </description>
 
-    <launchable type="desktop-id">shadok_and_gibby.desktop</launchable>
+    <launchable type="desktop-id">${APP_ID}.desktop</launchable>
 </component>

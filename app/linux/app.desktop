@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Type=Application
+Categories=Game;StrategyGame
+Name=Shadok and Gibby
+Name[ru]=Шадок и Гибии
+Exec=${APP_ID}
+Icon=${APP_ID}
+Terminal=false

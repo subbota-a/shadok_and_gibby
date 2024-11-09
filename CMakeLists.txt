@@ -3,6 +3,8 @@ project(ShadokAndGibby VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 23)
 
+set(APP_ID shadok_and_gibby CACHE STRING "Executable name of the application" )
+
 add_subdirectory(paths)
 add_subdirectory(domain)
 add_subdirectory(logic)
@@ -27,15 +29,27 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
         sdl2/win/lib/x64/SDL2_ttf.dll
         DESTINATION .)
 else()
-    set(app_name shadok_and_gibby)
-    set(_desktop_file "${CMAKE_BINARY_DIR}/${app_name}.desktop")
+    set(_desktop_file "${CMAKE_BINARY_DIR}/${APP_ID}.desktop")
+    set(_metainfo_file "${CMAKE_BINARY_DIR}/${APP_ID}.metainfo.xml")
     configure_file(
-        app/linux/app.desktop.in
+        app/linux/app.desktop
         ${_desktop_file}
     )
-    install(TARGETS shadok_and_gibby RUNTIME DESTINATION bin)
-    install(DIRECTORY assets DESTINATION share/${CMAKE_PROJECT_NAME} )
-    install(DIRECTORY app/linux/icons DESTINATION share )
+    configure_file(
+        app/linux/metainfo.xml
+        ${_metainfo_file}
+    )
+
+    install(TARGETS ${APP_ID} RUNTIME DESTINATION bin)
+    install(DIRECTORY assets DESTINATION share/${APP_ID} )
     install(PROGRAMS ${_desktop_file} DESTINATION share/applications )
-    install(FILES app/linux/io.github.subbota_a.shadok_and_gibby.metainfo.xml DESTINATION share/metainfo)
+    install(FILES ${_metainfo_file} DESTINATION share/metainfo)
+
+    file(GLOB_RECURSE ICON_FILES LIST_DIRECTORIES false RELATIVE "${CMAKE_SOURCE_DIR}/app/linux/icons" "icon.*" )
+    foreach(icon_file ${ICON_FILES})
+        cmake_path(GET icon_file PARENT_PATH rel_dir)
+        cmake_path(GET icon_file EXTENSION LAST_ONLY extension)
+        install(FILES "app/linux/icons/${icon_file}" DESTINATION "share/icons/${rel_dir}" RENAME "${APP_ID}${extension}")
+    endforeach()
+
 endif ()

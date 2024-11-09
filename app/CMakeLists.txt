@@ -1,7 +1,7 @@
 find_package(tomlplusplus REQUIRED)
 find_package(SDL2 REQUIRED)
 
-set(_target shadok_and_gibby)
+set(_target ${APP_ID})
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_executable(${_target} WIN32)
@@ -28,4 +28,4 @@ target_link_libraries(${_target}
     SDL2::SDL2main
     SDL2::SDL2
 )
-target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")
+target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${APP_ID}")

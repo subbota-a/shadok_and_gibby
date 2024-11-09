@@ -37,4 +37,4 @@ if (CMAKE_SYSTEM_NAME STREQUAL Windows)
 endif()
 
 target_include_directories(${_target} PUBLIC include)
-target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${CMAKE_PROJECT_NAME}")
+target_compile_definitions(${_target} PRIVATE PROJECT_NAME="${APP_ID}")
