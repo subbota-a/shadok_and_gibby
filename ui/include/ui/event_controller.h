@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <variant>
+#include <optional>
 
 namespace ui {
 

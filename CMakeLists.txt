@@ -2,8 +2,13 @@ cmake_minimum_required(VERSION 3.25)
 project(ShadokAndGibby VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(APP_ID shadok_and_gibby CACHE STRING "Executable name of the application" )
+set(APP_ID shadok_and_gibby CACHE STRING "Executable name of the application")
+if (DEFINED ENV{FLATPAK_ID})
+    set(APP_ID $ENV{FLATPAK_ID} CACHE STRING "Executable name of the application" FORCE)
+endif ()
+message(STATUS "APP_ID=${APP_ID}")
 
 add_subdirectory(paths)
 add_subdirectory(domain)
